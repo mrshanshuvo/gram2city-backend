@@ -6,3 +6,4 @@ firebase_admin.json
 walkthrough.md
 logs.txt
 *.log
+.env*
