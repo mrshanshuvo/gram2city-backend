@@ -119,6 +119,19 @@ export class RiderService {
       return { success: false, message: 'Rider not found' };
     }
 
+    if (parcelId) {
+      const existingCashout = await CashoutModel.findOne({
+        parcel_id: new ObjectId(String(parcelId)),
+        status: { $ne: 'rejected' },
+      }).lean();
+      if (existingCashout) {
+        return {
+          success: false,
+          message: 'Payout for this parcel has already been requested or processed.',
+        };
+      }
+    }
+
     // Calculate actual earnings minus already cashed out
     const deliveryStats = await ParcelModel.aggregate([
       {
@@ -142,12 +155,19 @@ export class RiderService {
       rider_email: email,
       rider_name: rider.name,
       amount: Number(amount),
+      earning: Number(amount),
       status: 'pending' as const,
       requested_at: new Date().toISOString(),
+      cashed_out_at: new Date().toISOString(),
     };
 
     if (parcelId) {
+      const parcel = await ParcelModel.findOne({ _id: new ObjectId(String(parcelId)) }).lean();
       payoutRequest.parcel_id = new ObjectId(String(parcelId));
+      if (parcel) {
+        payoutRequest.trackingId = parcel.trackingId;
+        payoutRequest.parcel_name = parcel.parcelName;
+      }
     }
 
     await CashoutModel.create(payoutRequest);

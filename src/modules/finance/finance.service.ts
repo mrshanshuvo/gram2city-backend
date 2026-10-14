@@ -126,8 +126,23 @@ export class FinanceService {
   }
 
   static async getCashoutHistory(riderEmail: string): Promise<any[]> {
-    return CashoutModel.find({ rider_email: riderEmail })
-      .select('parcel_id trackingId earning cashed_out_at parcel_name')
+    const cashouts = await CashoutModel.find({ rider_email: riderEmail })
+      .populate('parcel_id', 'trackingId parcelName rider_earning')
+      .sort({ requested_at: -1 })
       .lean();
+
+    return cashouts.map((c: any) => ({
+      _id: c._id?.toString(),
+      rider_email: c.rider_email,
+      rider_name: c.rider_name,
+      amount: c.amount ?? c.earning ?? 0,
+      earning: c.earning ?? c.amount ?? 0,
+      status: c.status,
+      requested_at: c.requested_at,
+      cashed_out_at: c.cashed_out_at || c.requested_at,
+      parcel_id: c.parcel_id?._id ? c.parcel_id._id.toString() : c.parcel_id?.toString() || '',
+      trackingId: c.trackingId || c.parcel_id?.trackingId || '',
+      parcel_name: c.parcel_name || c.parcel_id?.parcelName || '',
+    }));
   }
 }

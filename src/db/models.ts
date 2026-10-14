@@ -184,11 +184,15 @@ const paymentSchema = new Schema<Payment>(
 const cashoutSchema = new Schema<Cashout>(
   {
     parcel_id: { type: Schema.Types.ObjectId, ref: 'Parcel' },
+    trackingId: { type: String },
+    parcel_name: { type: String },
     rider_email: { type: String, required: true, index: true },
     rider_name: { type: String },
     amount: { type: Number, required: true },
+    earning: { type: Number },
     status: { type: String, enum: ['pending', 'approved', 'rejected'], default: 'pending' },
     requested_at: { type: String, default: () => new Date().toISOString() },
+    cashed_out_at: { type: String },
     processed_at: { type: String },
     processed_by: { type: String },
   },

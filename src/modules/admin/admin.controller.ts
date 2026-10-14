@@ -183,8 +183,8 @@ export const getFleet = async (req: Request, res: Response) => {
 export const getPayouts = async (req: Request, res: Response) => {
   try {
     const payouts = await AdminService.getPayouts();
-    res.send({ success: true, data: payouts });
-  } catch (error) {
+    res.send({ success: true, data: payouts, payouts });
+  } catch (_error) {
     res.status(500).send({ success: false, message: 'Failed to fetch payouts' });
   }
 };

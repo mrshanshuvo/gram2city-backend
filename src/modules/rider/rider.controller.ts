@@ -125,15 +125,38 @@ export const requestPayout = async (req: Request, res: Response) => {
     let { amount } = req.body;
 
     if (!amount && parcelId) {
+      if (!ObjectId.isValid(String(parcelId))) {
+        return res.status(400).send({ success: false, message: 'Invalid parcel ID.' });
+      }
       const parcel = await ParcelModel.findOne({ _id: new ObjectId(String(parcelId)) }).lean();
       if (!parcel) {
         return res.status(404).send({ success: false, message: 'Parcel not found.' });
       }
+      if (parcel.assigned_rider_email !== email) {
+        return res
+          .status(403)
+          .send({ success: false, message: 'You are not assigned to this parcel.' });
+      }
+      if (parcel.delivery_status !== 'delivered') {
+        return res
+          .status(400)
+          .send({ success: false, message: 'Parcel must be delivered before requesting cashout.' });
+      }
       amount = parcel.rider_earning || 0;
     }
 
-    if (!amount || Number(amount) < 50) {
-      return res.status(400).send({ success: false, message: 'Minimum payout amount is 50 BDT.' });
+    if (parcelId) {
+      if (!amount || Number(amount) <= 0) {
+        return res
+          .status(400)
+          .send({ success: false, message: 'No valid earnings found for this parcel.' });
+      }
+    } else {
+      if (!amount || Number(amount) < 50) {
+        return res
+          .status(400)
+          .send({ success: false, message: 'Minimum payout amount is 50 BDT.' });
+      }
     }
 
     const result = await RiderService.requestPayout(email, Number(amount), parcelId);
@@ -141,7 +164,7 @@ export const requestPayout = async (req: Request, res: Response) => {
       return res.status(400).send(result);
     }
     res.send(result);
-  } catch (error) {
+  } catch (_error) {
     res.status(500).send({ success: false, message: 'Failed to request payout' });
   }
 };
