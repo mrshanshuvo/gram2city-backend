@@ -1,6 +1,6 @@
 import { Request, Response } from 'express';
 import { UserService } from './user.service';
-import { User, Avatar } from './user.interface';
+import { User } from './user.interface';
 
 // ─── USER CONTROLLERS ────────────────────────────────────────────────────────
 

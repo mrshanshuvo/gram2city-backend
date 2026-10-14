@@ -7,7 +7,7 @@ import {
   ReviewModel,
   TrackingModel,
 } from '../../db/models';
-import { Rider, Cashout } from './rider.interface';
+import { Rider } from './rider.interface';
 import { Parcel } from '../parcel/parcel.interface';
 
 export class RiderService {

@@ -365,6 +365,14 @@ export class AdminService {
       time: new Date().toISOString(),
     });
 
+    await AuditModel.create({
+      admin_email: adminEmail,
+      action: 'PARCEL_ASSIGNMENT',
+      target_id: parcelId,
+      details: `Assigned parcel ${parcel.trackingId} to rider ${rider.name} (${rider.email})`,
+      timestamp: new Date().toISOString(),
+    });
+
     return { success: true, message: 'Rider assigned successfully' };
   }
 

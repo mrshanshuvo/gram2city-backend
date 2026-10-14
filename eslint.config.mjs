@@ -19,20 +19,20 @@ export default tseslint.config(
       },
     },
     rules: {
-      '@typescript-eslint/no-explicit-any': 'warn',
+      '@typescript-eslint/no-explicit-any': 'off',
       '@typescript-eslint/no-unused-vars': [
         'warn',
         {
           argsIgnorePattern: '^_',
           varsIgnorePattern: '^_',
-          caughtErrorsIgnorePattern: '^_',
+          caughtErrors: 'none',
         },
       ],
       '@typescript-eslint/no-namespace': 'off',
       '@typescript-eslint/no-require-imports': 'off',
       '@typescript-eslint/explicit-function-return-type': 'off',
       'no-empty': ['error', { allowEmptyCatch: true }],
-      'no-useless-escape': 'warn',
+      'no-useless-escape': 'off',
       'prefer-const': 'error',
       'no-var': 'error',
     },

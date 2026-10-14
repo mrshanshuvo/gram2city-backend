@@ -10,7 +10,6 @@
  * Safe to re-run — Cloudinary URLs are never re-processed.
  */
 
-/* eslint-disable @typescript-eslint/no-var-requires */
 require('dotenv').config();
 
 const axios = require('axios');
