@@ -132,4 +132,4 @@ All routes mounted under `/` via `app.routes.ts`:
 - Dual-token session model: Access tokens in Authorization header, Refresh tokens in httpOnly cookies
 - Rate limiter is set to 1000 req / 15 min (intentionally high to support dashboard polling + dev)
 - `logs.txt` in root is generated at runtime — not committed to git
-- The project was previously named **ZapShift**; package name is now `gram2city-server`
+- The project is named **Gram2City** (`gram2city-server`)
