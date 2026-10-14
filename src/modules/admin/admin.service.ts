@@ -407,6 +407,40 @@ export class AdminService {
     return { success: true, message: `Merchant status updated to ${status}` };
   }
 
+  static async updateRiderStatus(
+    id: string,
+    status: string,
+    adminEmail: string,
+  ): Promise<{ success: boolean; message: string }> {
+    const rider = await RiderModel.findOne({
+      _id: new ObjectId(String(id)),
+    }).lean();
+    if (!rider) {
+      return { success: false, message: 'Rider not found' };
+    }
+
+    await RiderModel.updateOne(
+      { _id: new ObjectId(String(id)) },
+      { $set: { status: status as any, updatedAt: new Date().toISOString() } },
+    );
+
+    if (status === 'approved') {
+      await UserModel.updateOne({ email: rider.email }, { $set: { role: 'rider' } });
+    } else if (status === 'rejected') {
+      await UserModel.updateOne({ email: rider.email }, { $set: { role: 'user' } });
+    }
+
+    await AuditModel.create({
+      admin_email: adminEmail,
+      action: 'RIDER_STATUS_CHANGE',
+      target_id: id,
+      details: `Changed rider ${rider.name} (${rider.email}) status to ${status}`,
+      timestamp: new Date().toISOString(),
+    });
+
+    return { success: true, message: `Rider status updated to ${status}` };
+  }
+
   static async getFleetDistribution(): Promise<any[]> {
     return RiderModel.aggregate([{ $group: { _id: '$vehicleType', count: { $sum: 1 } } }]);
   }

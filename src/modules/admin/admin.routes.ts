@@ -10,6 +10,7 @@ import {
   assignRider,
   getMerchants,
   updateMerchantStatus,
+  updateRiderStatus,
   getFleet,
   getPayouts,
   updatePayoutStatus,
@@ -40,6 +41,7 @@ router.get('/all-parcels', getAllParcels);
 router.patch('/parcels/:id/assign', validate(assignRiderSchema), assignRider);
 router.get('/merchants', getMerchants);
 router.patch('/merchants/:id/status', updateMerchantStatus);
+router.patch('/riders/:id/status', updateRiderStatus);
 router.get('/fleet', getFleet);
 router.get('/payouts', getPayouts);
 router.patch('/payouts/:id/status', updatePayoutStatus);

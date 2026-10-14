@@ -1,6 +1,7 @@
 import { Request, Response } from 'express';
 import { ObjectId } from 'mongodb';
 import { RiderService } from './rider.service';
+import { ParcelModel } from '../../db/models';
 import { io } from '../../socket/socket';
 
 export const submitApplication = async (req: Request, res: Response) => {
@@ -109,9 +110,9 @@ export const getRiderReviews = async (req: Request, res: Response) => {
 
 export const getRiderStats = async (req: Request, res: Response) => {
   try {
-    const email = req.user?.email as string;
+    const email = (req.params.email || req.user?.email) as string;
     const stats = await RiderService.getRiderStats(email);
-    res.send({ success: true, stats });
+    res.send({ success: true, stats, ...stats });
   } catch (error) {
     res.status(500).send({ success: false, message: 'Failed to fetch stats.' });
   }
@@ -120,13 +121,22 @@ export const getRiderStats = async (req: Request, res: Response) => {
 export const requestPayout = async (req: Request, res: Response) => {
   try {
     const email = req.user?.email as string;
-    const { amount } = req.body;
+    const { parcelId } = req.body;
+    let { amount } = req.body;
 
-    if (!amount || amount < 500) {
-      return res.status(400).send({ success: false, message: 'Minimum payout is 500 BDT.' });
+    if (!amount && parcelId) {
+      const parcel = await ParcelModel.findOne({ _id: new ObjectId(String(parcelId)) }).lean();
+      if (!parcel) {
+        return res.status(404).send({ success: false, message: 'Parcel not found.' });
+      }
+      amount = parcel.rider_earning || 0;
     }
 
-    const result = await RiderService.requestPayout(email, amount);
+    if (!amount || Number(amount) < 50) {
+      return res.status(400).send({ success: false, message: 'Minimum payout amount is 50 BDT.' });
+    }
+
+    const result = await RiderService.requestPayout(email, Number(amount), parcelId);
     if (!result.success) {
       return res.status(400).send(result);
     }

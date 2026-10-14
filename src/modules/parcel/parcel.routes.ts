@@ -15,6 +15,8 @@ import {
   addManualTrackingUpdate,
   uploadImage,
 } from './parcel.controller';
+import { assignRider } from '../admin/admin.controller';
+import { assignRiderSchema } from '../admin/admin.schema';
 import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { parcelSchema, updateParcelSchema, trackingSchema } from './parcel.schema';
@@ -48,6 +50,13 @@ router.delete('/parcels/:id', verifyAuthToken, deleteParcel);
 // Rider Operations
 router.patch('/parcels/:id/pick', verifyAuthToken, markPicked);
 router.patch('/parcels/:id/deliver', verifyAuthToken, markDelivered);
+router.patch(
+  '/parcels/:id/assign',
+  verifyAuthToken,
+  verifyAdmin,
+  validate(assignRiderSchema),
+  assignRider,
+);
 
 // Merchant Bulk Upload
 router.post('/parcels/bulk', verifyAuthToken, bulkIngestParcels);

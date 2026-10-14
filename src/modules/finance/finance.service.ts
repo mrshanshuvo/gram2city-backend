@@ -58,7 +58,12 @@ export class FinanceService {
       paymentMethod?: string;
     },
     email: string,
-  ): Promise<{ success: boolean; message: string }> {
+  ): Promise<{
+    success: boolean;
+    message: string;
+    paymentId?: string;
+    data?: { paymentInsertResult: { insertedId: string } };
+  }> {
     const { parcelId, transactionId, amount, paymentMethod } = data;
 
     const parcel = await ParcelModel.findOne({
@@ -92,7 +97,7 @@ export class FinanceService {
       payment_time: new Date().toISOString(),
     };
 
-    await PaymentModel.create(paymentRecord);
+    const createdPayment = await PaymentModel.create(paymentRecord);
 
     await TrackingModel.create({
       trackingId: parcel.trackingId,
@@ -110,7 +115,14 @@ export class FinanceService {
       type: 'payment',
     });
 
-    return { success: true, message: 'Payment recorded successfully.' };
+    return {
+      success: true,
+      message: 'Payment recorded successfully.',
+      paymentId: createdPayment._id.toString(),
+      data: {
+        paymentInsertResult: { insertedId: createdPayment._id.toString() },
+      },
+    };
   }
 
   static async getCashoutHistory(riderEmail: string): Promise<any[]> {

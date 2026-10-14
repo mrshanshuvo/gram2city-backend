@@ -88,7 +88,9 @@ export const getAllParcels = async (req: Request, res: Response) => {
 
     res.send({
       status: 'success',
+      success: true,
       data: parcels,
+      parcels,
       pagination: {
         totalItems,
         totalPages,
@@ -125,7 +127,7 @@ export const getMerchants = async (req: Request, res: Response) => {
   try {
     const { status } = req.query;
     const merchants = await AdminService.getMerchants(status as string);
-    res.send({ success: true, data: merchants });
+    res.send({ success: true, data: merchants, merchants });
   } catch (error) {
     res.status(500).send({ success: false, message: 'Failed to fetch merchants' });
   }
@@ -147,6 +149,25 @@ export const updateMerchantStatus = async (req: Request, res: Response) => {
     res.send(result);
   } catch (error) {
     res.status(500).send({ success: false, message: 'Failed to update status' });
+  }
+};
+
+export const updateRiderStatus = async (req: Request, res: Response) => {
+  try {
+    const { id } = req.params;
+    const { status } = req.body;
+
+    const result = await AdminService.updateRiderStatus(
+      id as string,
+      status,
+      req.user?.email as string,
+    );
+    if (!result.success) {
+      return res.status(404).send(result);
+    }
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ success: false, message: 'Failed to update rider status' });
   }
 };
 

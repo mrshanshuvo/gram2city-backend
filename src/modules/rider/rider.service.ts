@@ -113,7 +113,7 @@ export class RiderService {
     };
   }
 
-  static async requestPayout(email: string, amount: number) {
+  static async requestPayout(email: string, amount: number, parcelId?: string) {
     const rider = await this.getRiderByEmail(email);
     if (!rider) {
       return { success: false, message: 'Rider not found' };
@@ -138,13 +138,17 @@ export class RiderService {
       return { success: false, message: 'Insufficient balance.' };
     }
 
-    const payoutRequest = {
+    const payoutRequest: any = {
       rider_email: email,
       rider_name: rider.name,
       amount: Number(amount),
       status: 'pending' as const,
       requested_at: new Date().toISOString(),
     };
+
+    if (parcelId) {
+      payoutRequest.parcel_id = new ObjectId(String(parcelId));
+    }
 
     await CashoutModel.create(payoutRequest);
 
