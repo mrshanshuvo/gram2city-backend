@@ -205,4 +205,3 @@ export const getAllUsers = async (req: Request, res: Response) => {
     res.status(500).send({ success: false, message: 'Failed to fetch users' });
   }
 };
-

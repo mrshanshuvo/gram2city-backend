@@ -45,4 +45,3 @@ router.get('/payouts', getPayouts);
 router.patch('/payouts/:id/status', updatePayoutStatus);
 
 export default router;
-
