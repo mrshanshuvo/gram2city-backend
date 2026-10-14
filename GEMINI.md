@@ -20,7 +20,7 @@ Handles auth, parcel management, rider assignment, payments, real-time chat, and
 | Framework    | Express 5 (CommonJS)                                 |
 | Language     | TypeScript 6                                         |
 | Database     | MongoDB native driver v6                             |
-| Auth         | Firebase Admin SDK v13 (JWT verification)            |
+| Auth         | Google OAuth (google-auth-library) + Native JWT      |
 | Real-time    | Socket.io v4                                         |
 | Payments     | Stripe v18                                           |
 | File uploads | Multer v2                                            |
@@ -42,7 +42,7 @@ src/
 ├── middleware/
 │   ├── logger.ts         # Morgan request logger
 │   ├── globalErrorHandler.ts  # Centralized error handler
-│   └── (auth guards)     # Firebase token verification middleware
+│   └── auth.ts           # Native JWT verification & RBAC guards
 ├── modules/              # Feature modules (MVC)
 │   ├── app.routes.ts     # Root API router (mounts all modules)
 │   ├── admin/            # Admin-only operations
@@ -63,7 +63,7 @@ src/
 ## Key Conventions
 
 - **Module pattern**: Each feature has its own folder with `router`, `controller`, and `service` files
-- **Auth**: All protected routes use Firebase Admin token verification middleware (`Authorization: Bearer <token>`)
+- **Auth**: All protected routes use native JWT token verification middleware (`verifyToken` / `verifyRole`) with `Authorization: Bearer <token>`
 - **Error handling**: Always throw to `globalErrorHandler`; never send error responses inline in controllers
 - **Validation**: Zod schemas on request body/query before hitting controller logic
 - **Env**: All config loaded from `.env` via `src/config/` — never `process.env` directly in business logic
@@ -74,10 +74,12 @@ src/
 
 ## Auth Flow
 
-1. Client sends Firebase ID token in `Authorization: Bearer <token>` header
-2. Auth middleware calls `admin.auth().verifyIdToken(token)`
-3. Decoded token's UID is used to look up the user document in MongoDB
-4. User role (`user` | `rider` | `admin`) is attached to `req.user` for downstream guards
+1. Client signs in with Email/Password (`POST /api/auth/login`) or Google OAuth token (`POST /api/auth/google`).
+2. Server validates credentials / Google token, ensures MongoDB user record exists, and issues a short-lived access JWT (`15m`) + httpOnly refresh JWT (`7d`).
+3. Refresh token hash/family is tracked in MongoDB `refresh_tokens` collection with auto-expiring TTL index.
+4. Client sends access JWT in `Authorization: Bearer <token>` header on protected API requests.
+5. Auth middleware validates JWT signature with `JWT_SECRET` and attaches user claims (`req.user = { email, role, id }`).
+6. Token refresh endpoint (`POST /api/auth/refresh`) silently exchanges httpOnly refresh cookie for a fresh access token.
 
 ---
 
@@ -85,12 +87,18 @@ src/
 
 | Variable                | Purpose                                      |
 | ----------------------- | -------------------------------------------- |
-| `PORT`                  | Express server port                          |
-| `MONGO_URI`             | MongoDB Atlas connection string              |
-| `CLIENT_URL`            | Comma-separated allowed CORS origins         |
-| `FB_SERVICE_KEY`        | Base64-encoded Firebase service account JSON |
+| `PORT`                  | Express server port (default 5000)           |
+| `MONGODB_URI`           | MongoDB Atlas connection string              |
+| `DB_NAME`               | MongoDB database name (`parcelDB`)           |
+| `CLIENT_URL`            | Allowed CORS origins                         |
+| `JWT_SECRET`            | Secret key for signing access JWTs           |
+| `JWT_REFRESH_SECRET`    | Secret key for signing refresh JWTs          |
+| `GOOGLE_CLIENT_ID`      | Google OAuth 2.0 Web Client ID               |
 | `STRIPE_SECRET_KEY`     | Stripe secret key                            |
-| `STRIPE_WEBHOOK_SECRET` | Stripe webhook signing secret                |
+| `STRIPE_CURRENCY`       | Stripe billing currency (`bdt`)              |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary storage account name              |
+| `CLOUDINARY_API_KEY`    | Cloudinary API key                           |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret                        |
 
 ---
 
@@ -121,7 +129,7 @@ All routes mounted under `/` via `app.routes.ts`:
 
 ## Notes
 
-- Firebase service account loaded from `FB_SERVICE_KEY` (base64 env var), not from a file at runtime
+- Dual-token session model: Access tokens in Authorization header, Refresh tokens in httpOnly cookies
 - Rate limiter is set to 1000 req / 15 min (intentionally high to support dashboard polling + dev)
 - `logs.txt` in root is generated at runtime — not committed to git
 - The project was previously named **ZapShift**; package name is now `gram2city-server`

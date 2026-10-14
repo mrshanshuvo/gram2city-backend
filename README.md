@@ -21,8 +21,8 @@ It follows a modular architecture where business domains are separated into inde
 * Finance functionality
 * Support functionality
 * Public API endpoints
-* Firebase Admin integration
-* JWT-based authentication support
+* Google OAuth 2.0 token verification (google-auth-library)
+* Native Dual-Token JWT authentication (Access + httpOnly Refresh)
 * MongoDB data persistence
 * Mongoose ODM
 * Stripe payment integration
@@ -53,9 +53,9 @@ It follows a modular architecture where business domains are separated into inde
 
 ### Authentication
 
-* Firebase Admin SDK
-* JSON Web Token
-* bcryptjs
+* Google Auth Library (`google-auth-library`)
+* JSON Web Token (`jsonwebtoken`)
+* bcryptjs (`bcryptjs`)
 
 ### Payments & External Services
 
@@ -119,7 +119,7 @@ Auth  User   Parcel   Rider  Finance Support
 
 ### Authentication
 
-Handles authentication-related operations and integration with Firebase Admin and application-level authentication.
+Handles authentication-related operations, Direct Google OAuth verification, native password hashing via bcryptjs, and dual-token JWT session management.
 
 ### Users
 
@@ -237,13 +237,12 @@ CLIENT_URL=http://localhost:3000
 
 MONGODB_URI=your_mongodb_connection_string
 
-JWT_SECRET=your_jwt_secret
-JWT_EXPIRES_IN=7d
+JWT_SECRET=your_32_character_minimum_random_secret
+JWT_REFRESH_SECRET=your_32_character_minimum_random_refresh_secret
+GOOGLE_CLIENT_ID=your_google_oauth_client_id.apps.googleusercontent.com
 
 STRIPE_SECRET_KEY=your_stripe_secret_key
-STRIPE_WEBHOOK_SECRET=your_stripe_webhook_secret
-
-FB_SERVICE_KEY=your_firebase_service_key
+STRIPE_CURRENCY=bdt
 ```
 
 Additional variables may be required for services such as Cloudinary.
@@ -252,7 +251,6 @@ Never commit:
 
 * `.env`
 * API keys
-* Firebase service-account credentials
 * Stripe secrets
 * Database credentials
 * JWT secrets
@@ -323,7 +321,7 @@ gram2city
 gram2city-backend
      │
      ├── MongoDB
-     ├── Firebase
+     ├── Google OAuth
      ├── Stripe
      ├── Cloudinary
      └── Socket.IO
@@ -337,9 +335,9 @@ This allows supported features to communicate with connected clients without rel
 
 ## Authentication
 
-The backend integrates with Firebase Admin for server-side authentication and also includes JWT and bcrypt-based authentication infrastructure.
+The backend handles authentication via Direct Google OAuth (`google-auth-library`) and native JWT dual-token infrastructure (short-lived access tokens with httpOnly refresh cookies).
 
-Authentication and authorization should be handled through the appropriate protected routes and middleware.
+Authentication and authorization are enforced through centralized protected routes and RBAC guards (`src/middleware/auth.ts`).
 
 ## Payments
 

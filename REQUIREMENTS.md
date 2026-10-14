@@ -22,8 +22,8 @@ Upgrade your existing backend into a feature-rich, production-ready, and profess
 
 ## 4. Security & Authentication
 
-- Password hashing (bcrypt or Firebase Auth integration)
-- JWT token / Firebase token authentication
+- Password hashing (bcryptjs)
+- Native JWT dual-token authentication (Access + httpOnly Refresh)
 - Input validation (Zod schemas on request body/query)
 - CORS configuration
 - Role-based access control (User / Rider / Admin / Merchant)
