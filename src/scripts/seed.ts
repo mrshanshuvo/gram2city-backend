@@ -93,10 +93,10 @@ async function seed() {
             phone: account.phone,
             status: 'approved',
             codBalance: 12500,
-            updatedAt: new Date().toISOString() as any,
+            updatedAt: new Date().toISOString(),
           },
           $setOnInsert: {
-            createdAt: new Date().toISOString() as any,
+            createdAt: new Date().toISOString(),
           },
         },
         { upsert: true },

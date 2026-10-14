@@ -9,7 +9,7 @@ Handles auth, parcel management, rider assignment, payments, real-time chat, and
 **Dev server**: `npm run dev` (ts-node-dev, `--respawn --transpile-only`)  
 **Package name**: `gram2city-server`  
 **Deployed to**: Vercel (`vercel.json` present)  
-**API version**: `2.3.0`  
+**API version**: `2.3.0`
 
 ---
 
@@ -85,20 +85,20 @@ src/
 
 ## Environment Variables (`.env`)
 
-| Variable                | Purpose                                      |
-| ----------------------- | -------------------------------------------- |
-| `PORT`                  | Express server port (default 5000)           |
-| `MONGODB_URI`           | MongoDB Atlas connection string              |
-| `DB_NAME`               | MongoDB database name (`parcelDB`)           |
-| `CLIENT_URL`            | Allowed CORS origins                         |
-| `JWT_SECRET`            | Secret key for signing access JWTs           |
-| `JWT_REFRESH_SECRET`    | Secret key for signing refresh JWTs          |
-| `GOOGLE_CLIENT_ID`      | Google OAuth 2.0 Web Client ID               |
-| `STRIPE_SECRET_KEY`     | Stripe secret key                            |
-| `STRIPE_CURRENCY`       | Stripe billing currency (`bdt`)              |
-| `CLOUDINARY_CLOUD_NAME` | Cloudinary storage account name              |
-| `CLOUDINARY_API_KEY`    | Cloudinary API key                           |
-| `CLOUDINARY_API_SECRET` | Cloudinary API secret                        |
+| Variable                | Purpose                             |
+| ----------------------- | ----------------------------------- |
+| `PORT`                  | Express server port (default 5000)  |
+| `MONGODB_URI`           | MongoDB Atlas connection string     |
+| `DB_NAME`               | MongoDB database name (`parcelDB`)  |
+| `CLIENT_URL`            | Allowed CORS origins                |
+| `JWT_SECRET`            | Secret key for signing access JWTs  |
+| `JWT_REFRESH_SECRET`    | Secret key for signing refresh JWTs |
+| `GOOGLE_CLIENT_ID`      | Google OAuth 2.0 Web Client ID      |
+| `STRIPE_SECRET_KEY`     | Stripe secret key                   |
+| `STRIPE_CURRENCY`       | Stripe billing currency (`bdt`)     |
+| `CLOUDINARY_CLOUD_NAME` | Cloudinary storage account name     |
+| `CLOUDINARY_API_KEY`    | Cloudinary API key                  |
+| `CLOUDINARY_API_SECRET` | Cloudinary API secret               |
 
 ---
 
@@ -106,16 +106,16 @@ src/
 
 All routes mounted under `/` via `app.routes.ts`:
 
-| Prefix     | Module     | Auth               |
-| ---------- | ---------- | ------------------ |
-| `/auth`    | auth       | Public + Protected |
-| `/user`    | user       | User role          |
-| `/rider`   | rider      | Rider role         |
-| `/admin`   | admin      | Admin role         |
-| `/parcel`  | parcel     | Mixed              |
-| `/finance` | finance    | Admin role         |
-| `/support` | support    | Mixed              |
-| `/public`  | public     | None               |
+| Prefix     | Module  | Auth               |
+| ---------- | ------- | ------------------ |
+| `/auth`    | auth    | Public + Protected |
+| `/user`    | user    | User role          |
+| `/rider`   | rider   | Rider role         |
+| `/admin`   | admin   | Admin role         |
+| `/parcel`  | parcel  | Mixed              |
+| `/finance` | finance | Admin role         |
+| `/support` | support | Mixed              |
+| `/public`  | public  | None               |
 
 ---
 

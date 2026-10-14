@@ -99,18 +99,20 @@ export interface Rider {
 
 export interface Merchant {
   _id?: ObjectId;
-  userId: ObjectId;
+  userId?: ObjectId;
   email: string;
-  businessName: string;
+  businessName?: string;
+  storeName?: string;
   businessType?: string;
   tradeLicense?: string;
   logo?: string;
-  address: string;
-  district: string;
-  phone: string;
+  address?: string;
+  district?: string;
+  phone?: string;
   status: 'pending' | 'approved' | 'suspended' | 'rejected';
-  createdAt: string;
-  updatedAt?: string;
+  codBalance?: number;
+  createdAt?: string | Date;
+  updatedAt?: string | Date;
 }
 
 export interface Payment {

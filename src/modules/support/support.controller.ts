@@ -26,7 +26,7 @@ export const getFAQs = async (req: Request, res: Response) => {
         totalPages: Math.ceil(total / Number(limit)),
       },
     });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to fetch FAQs' });
   }
 };
@@ -55,7 +55,7 @@ export const voteFAQHelpful = async (req: Request, res: Response) => {
       return res.status(400).send(result);
     }
     res.send(result);
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to process feedback' });
   }
 };
@@ -64,7 +64,7 @@ export const getFAQCategories = async (_req: Request, res: Response) => {
   try {
     const categories = await SupportService.getFAQCategories();
     res.send({ success: true, data: categories });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to fetch categories' });
   }
 };
@@ -73,7 +73,7 @@ export const getAllFAQsAdmin = async (_req: Request, res: Response) => {
   try {
     const faqs = await SupportService.getAllFAQsAdmin();
     res.send({ success: true, data: faqs });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to fetch FAQs' });
   }
 };
@@ -91,11 +91,14 @@ export const createFAQ = async (req: Request, res: Response) => {
       createdAt: new Date().toISOString(),
     };
     const result = await SupportService.createFAQ(newFAQ);
+    const createdId =
+      (result as { _id?: unknown; insertedId?: unknown })._id ||
+      (result as { _id?: unknown; insertedId?: unknown }).insertedId;
     res.status(201).send({
       success: true,
-      data: { ...newFAQ, _id: (result as any)._id || (result as any).insertedId },
+      data: { ...newFAQ, _id: createdId },
     });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to create FAQ' });
   }
 };
@@ -111,7 +114,7 @@ export const updateFAQ = async (req: Request, res: Response) => {
       return res.status(404).send({ success: false, message: 'FAQ not found' });
     }
     res.send({ success: true, message: 'FAQ updated successfully' });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to update FAQ' });
   }
 };
@@ -124,7 +127,7 @@ export const deleteFAQ = async (req: Request, res: Response) => {
       return res.status(404).send({ success: false, message: 'FAQ not found' });
     }
     res.send({ success: true, message: 'FAQ deleted successfully' });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to delete FAQ' });
   }
 };
@@ -164,10 +167,11 @@ export const submitFeedback = async (req: Request, res: Response) => {
     };
 
     const result = await SupportService.submitFeedback(feedback);
-    res
-      .status(201)
-      .send({ success: true, insertedId: (result as any)._id || (result as any).insertedId });
-  } catch (error) {
+    const insertedId =
+      (result as { _id?: unknown; insertedId?: unknown })._id ||
+      (result as { _id?: unknown; insertedId?: unknown }).insertedId;
+    res.status(201).send({ success: true, insertedId });
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to submit feedback' });
   }
 };
@@ -181,10 +185,11 @@ export const submitContactMessage = async (req: Request, res: Response) => {
         .send({ success: false, message: 'Name, email and message are required' });
     }
     const result = await SupportService.submitContactMessage({ name, email, subject, message });
-    res
-      .status(201)
-      .send({ success: true, insertedId: (result as any)._id || (result as any).insertedId });
-  } catch (error) {
+    const insertedId =
+      (result as { _id?: unknown; insertedId?: unknown })._id ||
+      (result as { _id?: unknown; insertedId?: unknown }).insertedId;
+    res.status(201).send({ success: true, insertedId });
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to send message' });
   }
 };
@@ -193,7 +198,7 @@ export const getAllFeedback = async (_req: Request, res: Response) => {
   try {
     const feedback = await SupportService.getAllFeedback();
     res.send({ success: true, data: feedback });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to fetch feedback' });
   }
 };
@@ -224,7 +229,7 @@ export const markNotificationRead = async (req: Request, res: Response) => {
 
 export const markAllNotificationsRead = async (req: Request, res: Response) => {
   const { email } = req.params;
-  if ((req.user as any)?.email !== email)
+  if (req.user?.email !== email)
     return res.status(403).send({ success: false, message: 'Unauthorized' });
   try {
     const result = await SupportService.markAllNotificationsRead(email as string);
@@ -253,7 +258,7 @@ export const getChatHistory = async (req: Request, res: Response) => {
 
     const messages = await SupportService.getChatHistory(conversationId as string);
     res.send({ success: true, data: messages });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to fetch messages' });
   }
 };
@@ -268,7 +273,9 @@ const logDebug = (msg: string) => {
       path.join(__dirname, '../../../debug.log'),
       `[${new Date().toISOString()}] ${msg}\n`,
     );
-  } catch (err) {}
+  } catch {
+    // Ignore logging errors
+  }
 };
 
 export const getUserConversations = async (req: Request, res: Response) => {
@@ -287,8 +294,9 @@ export const getUserConversations = async (req: Request, res: Response) => {
     logDebug(`getUserConversations results count: ${conversations.length}`);
 
     res.send({ success: true, data: conversations });
-  } catch (error: any) {
-    logDebug(`getUserConversations ERROR: ${error.message || error}`);
+  } catch (error: unknown) {
+    const err = error as Error;
+    logDebug(`getUserConversations ERROR: ${err?.message || String(error)}`);
     res.status(500).send({ success: false, message: 'Failed to fetch conversations' });
   }
 };
@@ -306,7 +314,7 @@ export const uploadChatImage = async (req: Request, res: Response) => {
   try {
     const url = await uploadToCloudinary(req.file, 'gram2city/chat');
     res.send({ success: true, url });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Failed to upload image' });
   }
 };

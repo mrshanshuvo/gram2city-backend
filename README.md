@@ -12,77 +12,77 @@ It follows a modular architecture where business domains are separated into inde
 
 ## Features
 
-* RESTful API
-* Authentication and authorization
-* User management
-* Administrative management
-* Parcel management
-* Rider management
-* Finance functionality
-* Support functionality
-* Public API endpoints
-* Google OAuth 2.0 token verification (google-auth-library)
-* Native Dual-Token JWT authentication (Access + httpOnly Refresh)
-* MongoDB data persistence
-* Mongoose ODM
-* Stripe payment integration
-* Cloudinary integration
-* Socket.IO real-time communication
-* Request validation with Zod
-* File upload support
-* Centralized error handling
-* HTTP request logging
-* Security headers
-* CORS configuration
-* Response compression
-* API rate limiting
-* Environment-based configuration
+- RESTful API
+- Authentication and authorization
+- User management
+- Administrative management
+- Parcel management
+- Rider management
+- Finance functionality
+- Support functionality
+- Public API endpoints
+- Google OAuth 2.0 token verification (google-auth-library)
+- Native Dual-Token JWT authentication (Access + httpOnly Refresh)
+- MongoDB data persistence
+- Mongoose ODM
+- Stripe payment integration
+- Cloudinary integration
+- Socket.IO real-time communication
+- Request validation with Zod
+- File upload support
+- Centralized error handling
+- HTTP request logging
+- Security headers
+- CORS configuration
+- Response compression
+- API rate limiting
+- Environment-based configuration
 
 ## Technology Stack
 
 ### Backend
 
-* Node.js
-* Express.js
-* TypeScript
+- Node.js
+- Express.js
+- TypeScript
 
 ### Database
 
-* MongoDB
-* Mongoose
+- MongoDB
+- Mongoose
 
 ### Authentication
 
-* Google Auth Library (`google-auth-library`)
-* JSON Web Token (`jsonwebtoken`)
-* bcryptjs (`bcryptjs`)
+- Google Auth Library (`google-auth-library`)
+- JSON Web Token (`jsonwebtoken`)
+- bcryptjs (`bcryptjs`)
 
 ### Payments & External Services
 
-* Stripe
-* Cloudinary
-* Axios
+- Stripe
+- Cloudinary
+- Axios
 
 ### Real-Time Communication
 
-* Socket.IO
+- Socket.IO
 
 ### Validation & Security
 
-* Zod
-* Helmet
-* CORS
-* express-rate-limit
-* Compression
+- Zod
+- Helmet
+- CORS
+- express-rate-limit
+- Compression
 
 ### Logging & Development
 
-* Morgan
-* ESLint
-* Prettier
-* Husky
-* lint-staged
-* ts-node-dev
+- Morgan
+- ESLint
+- Prettier
+- Husky
+- lint-staged
+- ts-node-dev
 
 ## Architecture
 
@@ -191,25 +191,25 @@ The application includes centralized middleware for:
 
 ### Security
 
-* Helmet
-* CORS
-* Rate limiting
+- Helmet
+- CORS
+- Rate limiting
 
 ### Performance
 
-* Compression
+- Compression
 
 ### Logging
 
-* HTTP/application request logging
+- HTTP/application request logging
 
 ### Error Handling
 
-* Centralized global error handler
+- Centralized global error handler
 
 ### Validation
 
-* Zod-based request validation
+- Zod-based request validation
 
 ## Rate Limiting
 
@@ -249,20 +249,20 @@ Additional variables may be required for services such as Cloudinary.
 
 Never commit:
 
-* `.env`
-* API keys
-* Stripe secrets
-* Database credentials
-* JWT secrets
+- `.env`
+- API keys
+- Stripe secrets
+- Database credentials
+- JWT secrets
 
 ## Getting Started
 
 ### Prerequisites
 
-* Node.js
-* npm
-* MongoDB
-* Git
+- Node.js
+- npm
+- MongoDB
+- Git
 
 ### Clone
 
@@ -399,10 +399,10 @@ The application uses a centralized global error handler to provide consistent AP
 
 The project uses:
 
-* ESLint
-* Prettier
-* Husky
-* lint-staged
+- ESLint
+- Prettier
+- Husky
+- lint-staged
 
 These tools help maintain consistent code quality and formatting across the backend.
 
