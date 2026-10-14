@@ -3,6 +3,7 @@ import express from 'express';
 import cors from 'cors';
 import helmet from 'helmet';
 import compression from 'compression';
+import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
 import admin from 'firebase-admin';
 import logger from './middleware/logger';
@@ -33,8 +34,14 @@ app.use(
 );
 app.use(logger); // Request logging
 app.use(compression()); // Gzip compression
-const clientOrigins = config.CLIENT_URL.split(',');
-app.use(cors({ origin: clientOrigins }));
+const clientOrigins = config.CLIENT_URL.split(',').map((url) => url.trim());
+app.use(
+  cors({
+    origin: clientOrigins,
+    credentials: true,
+  }),
+);
+app.use(cookieParser());
 app.use(express.json());
 app.use(express.urlencoded({ extended: true }));
 

@@ -1,10 +1,23 @@
 import { Request, Response } from 'express';
 import { AuthService } from './auth.service';
 import type { User } from '../../types/types';
+import { config } from '../../config';
+
+const REFRESH_COOKIE_NAME = 'gram2city_refresh_token';
+
+const setRefreshCookie = (res: Response, refreshToken: string) => {
+  res.cookie(REFRESH_COOKIE_NAME, refreshToken, {
+    httpOnly: true,
+    secure: config.NODE_ENV === 'production',
+    sameSite: config.NODE_ENV === 'production' ? 'none' : 'lax',
+    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    path: '/',
+  });
+};
 
 export const register = async (req: Request, res: Response) => {
-  const { email, password, name } = req.body;
-  let photoURL = '';
+  const { email, password, name, photoURL: bodyPhotoURL } = req.body;
+  let photoURL = bodyPhotoURL || '';
 
   try {
     const existingUser = await AuthService.getUserRecordByEmail(email);
@@ -36,8 +49,18 @@ export const register = async (req: Request, res: Response) => {
     };
     await AuthService.createUserRecord(newUser);
 
-    const { generateJWT } = await import('../../utils/jwt');
-    const token = generateJWT({ email: newUser.email, role: 'user' });
+    const { generateAccessToken, generateRefreshToken } = await import('../../utils/jwt');
+    const token = generateAccessToken({ email: newUser.email, role: 'user' });
+    const refreshToken = generateRefreshToken({ email: newUser.email, role: 'user' });
+
+    await AuthService.saveRefreshToken(
+      refreshToken,
+      newUser.email,
+      'user',
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    );
+
+    setRefreshCookie(res, refreshToken);
 
     res.status(201).send({
       success: true,
@@ -51,7 +74,7 @@ export const register = async (req: Request, res: Response) => {
         role: newUser.role,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Unexpected Register Error:', error);
     res.status(500).send({
       success: false,
@@ -96,8 +119,18 @@ export const login = async (req: Request, res: Response) => {
       }
     }
 
-    const { generateJWT } = await import('../../utils/jwt');
-    const token = generateJWT({ email: user.email, role: user.role || 'user' });
+    const { generateAccessToken, generateRefreshToken } = await import('../../utils/jwt');
+    const token = generateAccessToken({ email: user.email, role: user.role || 'user' });
+    const refreshToken = generateRefreshToken({ email: user.email, role: user.role || 'user' });
+
+    await AuthService.saveRefreshToken(
+      refreshToken,
+      user.email,
+      user.role || 'user',
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    );
+
+    setRefreshCookie(res, refreshToken);
     const lastLogin = await AuthService.updateLastLogin(email);
 
     res.send({
@@ -113,7 +146,7 @@ export const login = async (req: Request, res: Response) => {
         role: user.role,
       },
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error('Login Error:', error);
     res.status(401).send({ success: false, message: 'Login failed.' });
   }
@@ -138,7 +171,7 @@ export const getMe = async (req: Request, res: Response) => {
         emailVerified: req.user?.email_verified || false,
       },
     });
-  } catch (error) {
+  } catch {
     res.status(500).send({ success: false, message: 'Server error' });
   }
 };
@@ -156,10 +189,11 @@ export const sendVerification = async (req: Request, res: Response) => {
       success: true,
       message: 'Verification email sent. Please check your inbox.',
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { error?: { message?: string } } } };
     res.status(400).send({
       success: false,
-      message: error.response?.data?.error?.message || 'Failed to send verification email.',
+      message: err.response?.data?.error?.message || 'Failed to send verification email.',
     });
   }
 };
@@ -195,8 +229,9 @@ export const resetPassword = async (req: Request, res: Response) => {
       success: true,
       message: 'A password reset link has been sent to your email.',
     });
-  } catch (error: any) {
-    const fbErrMsg = error.response?.data?.error?.message || '';
+  } catch (error: unknown) {
+    const err = error as { response?: { data?: { error?: { message?: string } } } };
+    const fbErrMsg = err.response?.data?.error?.message || '';
     let message = 'Failed to send reset email.';
 
     if (fbErrMsg.includes('EMAIL_NOT_FOUND')) message = 'No account found with this email address.';
@@ -225,7 +260,7 @@ export const adminCreateUser = async (req: Request, res: Response) => {
       email,
       name,
       photoURL: '',
-      role: role as any,
+      role: role as User['role'],
       created_at: new Date().toISOString(),
       last_login: '',
     };
@@ -236,14 +271,165 @@ export const adminCreateUser = async (req: Request, res: Response) => {
       message: `Successfully onboarded new ${role}: ${name}`,
       uid: fbUser.uid,
     });
-  } catch (error: any) {
+  } catch (error: unknown) {
+    const err = error as { code?: string };
     let message = 'Failed to create user.';
 
-    if (error.code === 'auth/email-already-exists') message = 'This email is already registered.';
-    else if (error.code === 'auth/invalid-password')
+    if (err.code === 'auth/email-already-exists') message = 'This email is already registered.';
+    else if (err.code === 'auth/invalid-password')
       message = 'Password must be at least 6 characters.';
-    else if (error.code === 'auth/invalid-email') message = 'The email address is badly formatted.';
+    else if (err.code === 'auth/invalid-email') message = 'The email address is badly formatted.';
 
     res.status(400).send({ success: false, message });
+  }
+};
+
+// ─── Dual-Token: Refresh Token Endpoint ──────────────────────────────────────
+
+export const refreshTokenHandler = async (req: Request, res: Response) => {
+  try {
+    const incomingRefreshToken = req.cookies[REFRESH_COOKIE_NAME];
+    if (!incomingRefreshToken) {
+      return res.status(401).send({ success: false, message: 'No refresh token provided' });
+    }
+
+    // 1. Verify token signature
+    const { verifyRefreshToken, generateAccessToken, generateRefreshToken } =
+      await import('../../utils/jwt');
+    let decoded: import('../../utils/jwt').JWTPayload;
+    try {
+      decoded = verifyRefreshToken(incomingRefreshToken);
+    } catch {
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      return res.status(401).send({ success: false, message: 'Invalid or expired refresh token' });
+    }
+
+    // 2. Verify token presence in database
+    const storedToken = await AuthService.findRefreshToken(incomingRefreshToken);
+    if (!storedToken) {
+      res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+      return res.status(401).send({ success: false, message: 'Refresh token revoked or invalid' });
+    }
+
+    // 3. Rotate token
+    await AuthService.deleteRefreshToken(incomingRefreshToken);
+
+    const payload = { email: decoded.email, role: decoded.role, uid: decoded.uid };
+    const newAccessToken = generateAccessToken(payload);
+    const newRefreshToken = generateRefreshToken(payload);
+
+    await AuthService.saveRefreshToken(
+      newRefreshToken,
+      decoded.email,
+      decoded.role,
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    );
+
+    setRefreshCookie(res, newRefreshToken);
+
+    res.send({
+      success: true,
+      token: newAccessToken,
+      role: decoded.role,
+    });
+  } catch (error) {
+    console.error('Refresh token error:', error);
+    res.status(500).send({ success: false, message: 'Failed to refresh token' });
+  }
+};
+
+// ─── Dual-Token: Logout Endpoint ─────────────────────────────────────────────
+
+export const logoutHandler = async (req: Request, res: Response) => {
+  try {
+    const token = req.cookies[REFRESH_COOKIE_NAME];
+    if (token) {
+      await AuthService.deleteRefreshToken(token);
+    }
+    res.clearCookie(REFRESH_COOKIE_NAME, { path: '/' });
+    res.send({ success: true, message: 'Logged out successfully' });
+  } catch {
+    res.status(500).send({ success: false, message: 'Logout error' });
+  }
+};
+
+// ─── Direct Google OAuth 2.0 Endpoint ────────────────────────────────────────
+
+export const googleAuth = async (req: Request, res: Response) => {
+  const { credential, access_token } = req.body;
+  if (!credential && !access_token) {
+    return res.status(400).send({
+      success: false,
+      message: 'Google credential or access token is required',
+    });
+  }
+
+  try {
+    let email: string | undefined;
+    let name: string | undefined;
+    let picture: string | undefined;
+
+    if (credential) {
+      const payload = await AuthService.verifyGoogleIdToken(credential);
+      email = payload?.email;
+      name = payload?.name;
+      picture = payload?.picture;
+    } else if (access_token) {
+      const info = await AuthService.verifyGoogleAccessToken(access_token);
+      email = info.email;
+      name = info.name;
+      picture = info.picture;
+    }
+
+    if (!email) {
+      return res.status(401).send({ success: false, message: 'Invalid Google token' });
+    }
+
+    let user = await AuthService.getUserRecordByEmail(email);
+
+    if (!user) {
+      // Auto-provision Google user in MongoDB
+      const newUser: User = {
+        email,
+        name: name || email.split('@')[0],
+        photoURL: picture || `https://api.dicebear.com/7.x/lorelei/svg?seed=${email}`,
+        role: 'user',
+        created_at: new Date().toISOString(),
+        last_login: new Date().toISOString(),
+      };
+      await AuthService.createUserRecord(newUser);
+      user = newUser;
+    } else {
+      await AuthService.updateLastLogin(email);
+    }
+
+    const { generateAccessToken, generateRefreshToken } = await import('../../utils/jwt');
+    const accessToken = generateAccessToken({ email: user.email, role: user.role || 'user' });
+    const refreshToken = generateRefreshToken({ email: user.email, role: user.role || 'user' });
+
+    await AuthService.saveRefreshToken(
+      refreshToken,
+      user.email,
+      user.role || 'user',
+      new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
+    );
+
+    setRefreshCookie(res, refreshToken);
+
+    res.send({
+      success: true,
+      message: 'Google login successful',
+      token: accessToken,
+      role: user.role || 'user',
+      user: {
+        email: user.email,
+        name: user.name,
+        photoURL: user.photoURL,
+        role: user.role || 'user',
+      },
+    });
+  } catch (error: unknown) {
+    console.error('Google Auth Error:', error);
+    res.status(401).send({ success: false, message: 'Google authentication failed' });
   }
 };

@@ -1,5 +1,13 @@
 import mongoose from 'mongoose';
-import { MongoClient, ServerApiVersion } from 'mongodb';
+import {
+  MongoClient,
+  ServerApiVersion,
+  Collection,
+  IndexSpecification,
+  CreateIndexesOptions,
+  Document,
+  ObjectId,
+} from 'mongodb';
 import type {
   User,
   Parcel,
@@ -50,8 +58,8 @@ export const cashoutsCollection = db.collection<Cashout>('cashouts');
 export const trackingCollection = db.collection<TrackingUpdate>('trackings');
 export const reviewsCollection = db.collection<Review>('reviews');
 export const notificationsCollection = db.collection<Notification>('notifications');
-export const auditCollection = db.collection<any>('audit_logs');
-export const settingsCollection = db.collection<any>('system_settings');
+export const auditCollection = db.collection<Record<string, unknown>>('audit_logs');
+export const settingsCollection = db.collection<Record<string, unknown>>('system_settings');
 export const messagesCollection = db.collection<ChatMessage>('messages');
 export const feedbackCollection = db.collection<Feedback>('feedback');
 export const faqsCollection = db.collection<FAQ>('faqs');
@@ -66,8 +74,17 @@ export const avatarsCollection = db.collection<Avatar>('avatars');
 export const merchantsCollection = db.collection<Merchant>('merchants');
 export const warehousesCollection = db.collection('warehouses');
 export const newsletterCollection = db.collection('newsletter');
-export const testimonialsCollection = db.collection<any>('testimonials');
+export const testimonialsCollection = db.collection<Record<string, unknown>>('testimonials');
 export const addressesCollection = db.collection<Address>('addresses');
+
+export interface RefreshTokenRecord {
+  token: string;
+  email: string;
+  role: string;
+  expiresAt: Date;
+  createdAt: Date;
+}
+export const refreshTokensCollection = db.collection<RefreshTokenRecord>('refresh_tokens');
 
 // ─── DB Initialization (Mongoose + Indexing) ──────────────────────────────────
 export const initDB = async () => {
@@ -80,7 +97,12 @@ export const initDB = async () => {
       console.log('✅ Mongoose ODM connected successfully');
     }
 
-    const dropIndexIfExists = async (collection: any, indexName: string) => {
+    interface IndexableCollection {
+      dropIndex(name: string): Promise<unknown>;
+      createIndex(keys: IndexSpecification, options?: CreateIndexesOptions): Promise<string>;
+    }
+
+    const dropIndexIfExists = async (collection: IndexableCollection, indexName: string) => {
       try {
         await collection.dropIndex(indexName);
       } catch {
@@ -88,10 +110,10 @@ export const initDB = async () => {
       }
     };
 
-    const deduplicateCollection = async (collection: any, key: string) => {
+    const deduplicateCollection = async (collection: Collection<Document>, key: string) => {
       try {
         const duplicates = await collection
-          .aggregate([
+          .aggregate<{ _id: string; ids: ObjectId[]; count: number }>([
             {
               $group: {
                 _id: `$${key}`,
@@ -116,14 +138,19 @@ export const initDB = async () => {
       }
     };
 
-    const safeCreateIndex = async (collection: any, keys: any, options?: any) => {
+    const safeCreateIndex = async (
+      collection: IndexableCollection,
+      keys: IndexSpecification,
+      options?: CreateIndexesOptions,
+    ) => {
       try {
         await collection.createIndex(keys, options);
-      } catch (err: any) {
-        if (err?.code === 86 || err?.codeName === 'IndexKeySpecsConflict') {
+      } catch (err: unknown) {
+        const indexError = err as { code?: number; codeName?: string };
+        if (indexError?.code === 86 || indexError?.codeName === 'IndexKeySpecsConflict') {
           // If index spec conflicts, drop existing index and recreate
           try {
-            const indexName = Object.keys(keys)
+            const indexName = Object.keys(keys as Record<string, unknown>)
               .map((k) => `${k}_1`)
               .join('_');
             await collection.dropIndex(indexName);
@@ -143,13 +170,13 @@ export const initDB = async () => {
 
     // Clean up any invalid null/empty email rider records if present
     await ridersCollection.deleteMany({
-      $or: [{ email: null as any }, { email: { $exists: false } }],
+      $or: [{ email: null as unknown as string }, { email: { $exists: false } }],
     });
 
     // Deduplicate collections to prevent DuplicateKey index build errors
-    await deduplicateCollection(usersCollection, 'email');
-    await deduplicateCollection(merchantsCollection, 'email');
-    await deduplicateCollection(ridersCollection, 'email');
+    await deduplicateCollection(db.collection('users'), 'email');
+    await deduplicateCollection(db.collection('merchants'), 'email');
+    await deduplicateCollection(db.collection('riders'), 'email');
 
     // 1. usersCollection
     await safeCreateIndex(usersCollection, { email: 1 }, { unique: true });
@@ -192,6 +219,11 @@ export const initDB = async () => {
 
     // 9. addresses
     await addressesCollection.createIndex({ userEmail: 1 });
+
+    // 10. refresh tokens (with TTL index for automatic expiry cleanup)
+    await safeCreateIndex(refreshTokensCollection, { token: 1 }, { unique: true });
+    await safeCreateIndex(refreshTokensCollection, { expiresAt: 1 }, { expireAfterSeconds: 0 });
+    await safeCreateIndex(refreshTokensCollection, { email: 1 });
 
     console.log('✅ Database indexes & Mongoose models initialized smoothly');
   } catch (error) {

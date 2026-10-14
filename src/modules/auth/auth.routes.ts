@@ -8,6 +8,9 @@ import {
   deleteMe,
   resetPassword,
   adminCreateUser,
+  refreshTokenHandler,
+  logoutHandler,
+  googleAuth,
 } from './auth.controller';
 import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
@@ -18,6 +21,9 @@ const upload = multer({ storage: multer.memoryStorage() });
 
 router.post('/auth/register', upload.single('image'), validate(registerAuthSchema), register);
 router.post('/auth/login', validate(loginSchema), login);
+router.post('/auth/refresh', refreshTokenHandler);
+router.post('/auth/logout', logoutHandler);
+router.post('/auth/google', googleAuth);
 router.get('/auth/me', verifyFBToken, getMe);
 router.post('/auth/send-verification', verifyFBToken, sendVerification);
 router.delete('/auth/me', verifyFBToken, deleteMe);
