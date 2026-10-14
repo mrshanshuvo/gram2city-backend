@@ -1,6 +1,6 @@
 import { Request, Response, NextFunction } from 'express';
 import { usersCollection, merchantsCollection, ridersCollection } from '../db/db';
-import { verifyJWT } from '../utils/jwt';
+import { verifyAccessToken } from '../utils/jwt';
 
 // ─── Token Verification ───────────────────────────────────────────────────────
 
@@ -23,7 +23,7 @@ export const verifyAuthToken = async (
     return;
   }
   try {
-    const decodedJwt = verifyJWT(token);
+    const decodedJwt = verifyAccessToken(token);
     req.user = decodedJwt;
     return next();
   } catch {

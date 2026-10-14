@@ -41,8 +41,8 @@ export const voteFAQHelpful = async (req: Request, res: Response) => {
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
       if (token) {
         try {
-          const { verifyJWT } = await import('../../utils/jwt');
-          const decoded = verifyJWT(token);
+          const { verifyAccessToken } = await import('../../utils/jwt');
+          const decoded = verifyAccessToken(token);
           if (decoded.email) identifier = decoded.email;
         } catch {
           // Fallback to IP

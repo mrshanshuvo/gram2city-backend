@@ -20,11 +20,6 @@ export const generateAccessToken = (payload: JWTPayload): string => {
 };
 
 /**
- * Backward compatibility alias for generateAccessToken.
- */
-export const generateJWT = generateAccessToken;
-
-/**
  * Generates a long-lived Refresh Token (7 days) for secure session rotation.
  */
 export const generateRefreshToken = (payload: JWTPayload): string => {
@@ -37,11 +32,6 @@ export const generateRefreshToken = (payload: JWTPayload): string => {
 export const verifyAccessToken = (token: string): JWTPayload => {
   return jwt.verify(token, ACCESS_TOKEN_SECRET) as JWTPayload;
 };
-
-/**
- * Backward compatibility alias for verifyAccessToken.
- */
-export const verifyJWT = verifyAccessToken;
 
 /**
  * Verifies a Refresh Token against REFRESH_TOKEN_SECRET.

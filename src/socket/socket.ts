@@ -191,6 +191,6 @@ export const initSocket = (server: HttpServer) => {
 };
 
 async function verifySocketToken(token: string) {
-  const { verifyJWT } = await import('../utils/jwt');
-  return verifyJWT(token);
+  const { verifyAccessToken } = await import('../utils/jwt');
+  return verifyAccessToken(token);
 }
