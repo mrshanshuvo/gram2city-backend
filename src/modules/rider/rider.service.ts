@@ -9,6 +9,7 @@ import {
 } from '../../db/models';
 import { Rider } from './rider.interface';
 import { Parcel } from '../parcel/parcel.interface';
+import { Review, Cashout } from '../../types/types';
 
 export class RiderService {
   static async submitApplication(application: Omit<Rider, '_id'>) {
@@ -16,11 +17,11 @@ export class RiderService {
   }
 
   static async getAllRiders(status?: string, pageNum: number = 1, sizeNum: number = 50) {
-    const query: any = {};
+    const query: { status?: Rider['status'] } = {};
     if (status === 'available') {
       query.status = 'approved';
     } else if (status) {
-      query.status = status;
+      query.status = status as Rider['status'];
     }
 
     const totalItems = await RiderModel.countDocuments(query);
@@ -55,7 +56,9 @@ export class RiderService {
       return { success: false, message: 'Parcel not assigned to you.' };
     }
 
-    const updateFields: any = { delivery_status };
+    const updateFields: Partial<Parcel> = {
+      delivery_status: delivery_status as Parcel['delivery_status'],
+    };
 
     if (delivery_status === 'delivered') {
       updateFields.delivered_at = new Date().toISOString();
@@ -86,8 +89,10 @@ export class RiderService {
     return { success: true, message: `Status updated to ${delivery_status}.` };
   }
 
-  static async getRiderReviews(email: string): Promise<any[]> {
-    return ReviewModel.find({ rider_email: email }).sort({ date: -1 }).lean();
+  static async getRiderReviews(email: string): Promise<Review[]> {
+    return ReviewModel.find({ rider_email: email })
+      .sort({ date: -1 })
+      .lean() as unknown as Review[];
   }
 
   static async getRiderStats(email: string) {
@@ -151,7 +156,7 @@ export class RiderService {
       return { success: false, message: 'Insufficient balance.' };
     }
 
-    const payoutRequest: any = {
+    const payoutRequest: Omit<Cashout, '_id'> = {
       rider_email: email,
       rider_name: rider.name,
       amount: Number(amount),

@@ -12,6 +12,7 @@ import {
   TrackingModel,
 } from '../../db/models';
 import { AuditLog, SystemSettings } from './admin.interface';
+import { Merchant, Cashout, Rider, User, Parcel } from '../../types/types';
 
 export class AdminService {
   static async getAuditLogs(): Promise<AuditLog[]> {
@@ -95,7 +96,7 @@ export class AdminService {
 
     const dailyBookings = last7Days.map((date) => ({
       _id: date,
-      count: bookingsRaw.find((b: any) => b._id === date)?.count || 0,
+      count: bookingsRaw.find((b: { _id: string; count: number }) => b._id === date)?.count || 0,
     }));
 
     // 5. Parcel Type Distribution
@@ -224,7 +225,9 @@ export class AdminService {
   }
 
   static async getSettings(): Promise<SystemSettings> {
-    let settings = await SettingsModel.findOne({}).lean();
+    let settings: SystemSettings | null = (await SettingsModel.findOne(
+      {},
+    ).lean()) as unknown as SystemSettings | null;
 
     if (!settings) {
       const defaultSettings = {
@@ -235,10 +238,10 @@ export class AdminService {
         updated_by: 'system',
       };
       await SettingsModel.create(defaultSettings);
-      settings = defaultSettings as any;
+      settings = defaultSettings as unknown as SystemSettings;
     }
 
-    return settings as unknown as SystemSettings;
+    return settings;
   }
 
   static async updateSettings(
@@ -249,7 +252,7 @@ export class AdminService {
     },
     adminEmail: string,
   ): Promise<void> {
-    const updateData: any = {
+    const updateData: Partial<SystemSettings> & { updated_at: string; updated_by: string } = {
       updated_at: new Date().toISOString(),
       updated_by: adminEmail,
     };
@@ -271,7 +274,7 @@ export class AdminService {
   }
 
   static async updateUserStatus(email: string, status: string, adminEmail: string): Promise<void> {
-    await UserModel.updateOne({ email }, { $set: { status: status as any } });
+    await UserModel.updateOne({ email }, { $set: { status: status as User['status'] } });
 
     await AuditModel.create({
       admin_email: adminEmail,
@@ -288,16 +291,20 @@ export class AdminService {
     size: number,
   ) {
     const skip = (page - 1) * size;
-    const query: any = {};
+    const query: {
+      delivery_status?: Parcel['delivery_status'];
+      creation_date?: { $gte?: string; $lte?: string };
+    } = {};
 
     if (filter.delivery_status && filter.delivery_status !== 'all') {
-      query.delivery_status = filter.delivery_status;
+      query.delivery_status = filter.delivery_status as Parcel['delivery_status'];
     }
 
     if (filter.startDate || filter.endDate) {
-      query.creation_date = {};
-      if (filter.startDate) query.creation_date.$gte = new Date(filter.startDate).toISOString();
-      if (filter.endDate) query.creation_date.$lte = new Date(filter.endDate).toISOString();
+      const dateFilter: { $gte?: string; $lte?: string } = {};
+      if (filter.startDate) dateFilter.$gte = new Date(filter.startDate).toISOString();
+      if (filter.endDate) dateFilter.$lte = new Date(filter.endDate).toISOString();
+      query.creation_date = dateFilter;
     }
 
     const totalItems = await ParcelModel.countDocuments(query);
@@ -376,11 +383,11 @@ export class AdminService {
     return { success: true, message: 'Rider assigned successfully' };
   }
 
-  static async getMerchants(status?: string): Promise<any[]> {
-    const query: any = {};
-    if (status) query.status = status;
+  static async getMerchants(status?: string): Promise<Merchant[]> {
+    const query: { status?: Merchant['status'] } = {};
+    if (status) query.status = status as Merchant['status'];
 
-    return MerchantModel.find(query).sort({ createdAt: -1 }).lean();
+    return MerchantModel.find(query).sort({ createdAt: -1 }).lean() as unknown as Merchant[];
   }
 
   static async updateMerchantStatus(
@@ -397,7 +404,7 @@ export class AdminService {
 
     await MerchantModel.updateOne(
       { _id: new ObjectId(String(id)) },
-      { $set: { status: status as any, updatedAt: new Date().toISOString() } },
+      { $set: { status: status as Merchant['status'], updatedAt: new Date().toISOString() } },
     );
 
     if (status === 'approved') {
@@ -429,7 +436,7 @@ export class AdminService {
 
     await RiderModel.updateOne(
       { _id: new ObjectId(String(id)) },
-      { $set: { status: status as any, updatedAt: new Date().toISOString() } },
+      { $set: { status: status as Rider['status'], updatedAt: new Date().toISOString() } },
     );
 
     if (status === 'approved') {
@@ -449,12 +456,12 @@ export class AdminService {
     return { success: true, message: `Rider status updated to ${status}` };
   }
 
-  static async getFleetDistribution(): Promise<any[]> {
+  static async getFleetDistribution(): Promise<Array<{ _id: string; count: number }>> {
     return RiderModel.aggregate([{ $group: { _id: '$vehicleType', count: { $sum: 1 } } }]);
   }
 
-  static async getPayouts(): Promise<any[]> {
-    return CashoutModel.find().sort({ requested_at: -1 }).lean();
+  static async getPayouts(): Promise<Cashout[]> {
+    return CashoutModel.find().sort({ requested_at: -1 }).lean() as unknown as Cashout[];
   }
 
   static async updatePayoutStatus(
@@ -473,7 +480,7 @@ export class AdminService {
       { _id: new ObjectId(String(id)) },
       {
         $set: {
-          status: status as any,
+          status: status as Cashout['status'],
           processed_at: new Date().toISOString(),
           processed_by: adminEmail,
         },
@@ -501,7 +508,10 @@ export class AdminService {
 
   static async getAllUsers(search?: string, page: number = 1, size: number = 10) {
     const skip = (page - 1) * size;
-    const query: any = { role: 'user' };
+    const query: {
+      role?: User['role'];
+      email?: { $regex: string; $options: string };
+    } = { role: 'user' };
 
     if (search) {
       query.email = { $regex: search, $options: 'i' };
