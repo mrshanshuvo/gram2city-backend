@@ -12,7 +12,7 @@ import {
   logoutHandler,
   googleAuth,
 } from './auth.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { registerAuthSchema, loginSchema, adminCreateUserSchema } from './auth.schema';
 
@@ -24,13 +24,13 @@ router.post('/auth/login', validate(loginSchema), login);
 router.post('/auth/refresh', refreshTokenHandler);
 router.post('/auth/logout', logoutHandler);
 router.post('/auth/google', googleAuth);
-router.get('/auth/me', verifyFBToken, getMe);
-router.post('/auth/send-verification', verifyFBToken, sendVerification);
-router.delete('/auth/me', verifyFBToken, deleteMe);
+router.get('/auth/me', verifyAuthToken, getMe);
+router.post('/auth/send-verification', verifyAuthToken, sendVerification);
+router.delete('/auth/me', verifyAuthToken, deleteMe);
 router.post('/auth/reset-password', resetPassword);
 router.post(
   '/auth/admin/create-user',
-  verifyFBToken,
+  verifyAuthToken,
   verifyAdmin,
   validate(adminCreateUserSchema),
   adminCreateUser,

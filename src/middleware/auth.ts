@@ -31,8 +31,6 @@ export const verifyAuthToken = async (
   }
 };
 
-export const verifyFBToken = verifyAuthToken;
-
 // ─── Admin Guard ──────────────────────────────────────────────────────────────
 
 export const verifyAdmin = async (

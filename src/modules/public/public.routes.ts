@@ -22,7 +22,7 @@ import {
   updateLandingItem,
   deleteLandingItem,
 } from './public.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import {
   newsletterSchema,
@@ -104,19 +104,19 @@ router.get('/landing/warehouses', getWarehouses);
 // ─── LANDING CONFIG ADMIN ROUTES ─────────────────────────────────────────────
 router.patch(
   '/landing/config',
-  verifyFBToken,
+  verifyAuthToken,
   verifyAdmin,
   upload.single('ogImage'),
   parseNestedBody,
   validate(landingConfigUpdateSchema),
   updateLandingConfig,
 );
-router.get('/landing/newsletter', verifyFBToken, verifyAdmin, getNewsletterSubscribers);
+router.get('/landing/newsletter', verifyAuthToken, verifyAdmin, getNewsletterSubscribers);
 
 // ─── MERCHANT ONBOARDING & PERFORMANCE ───────────────────────────────────────
-router.post('/merchants', verifyFBToken, applyMerchant);
-router.get('/merchants/me', verifyFBToken, getMerchantProfile);
-router.get('/merchants/stats', verifyFBToken, getMerchantStats);
+router.post('/merchants', verifyAuthToken, applyMerchant);
+router.get('/merchants/me', verifyAuthToken, getMerchantProfile);
+router.get('/merchants/stats', verifyAuthToken, getMerchantStats);
 
 // ─── LANDING ELEMENTS CRUD ADMIN ROUTES ──────────────────────────────────────
 const registerCRUD = (name: string, schema?: any, imageField?: string) => {
@@ -124,15 +124,15 @@ const registerCRUD = (name: string, schema?: any, imageField?: string) => {
   if (imageField) middleware.push(upload.single(imageField));
   if (schema) middleware.push(validate(schema));
 
-  router.post(`/landing/${name}`, verifyFBToken, verifyAdmin, ...middleware, createLandingItem);
+  router.post(`/landing/${name}`, verifyAuthToken, verifyAdmin, ...middleware, createLandingItem);
   router.patch(
     `/landing/${name}/:id`,
-    verifyFBToken,
+    verifyAuthToken,
     verifyAdmin,
     ...middleware,
     updateLandingItem,
   );
-  router.delete(`/landing/${name}/:id`, verifyFBToken, verifyAdmin, deleteLandingItem);
+  router.delete(`/landing/${name}/:id`, verifyAuthToken, verifyAdmin, deleteLandingItem);
 };
 
 registerCRUD('banners', bannerSchema, 'image');

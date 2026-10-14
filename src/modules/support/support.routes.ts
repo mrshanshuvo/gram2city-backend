@@ -20,7 +20,7 @@ import {
   getUserConversations,
   uploadChatImage,
 } from './support.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { reviewSchema, feedbackSchema } from './support.schema';
 
@@ -48,27 +48,27 @@ router.post('/contact', submitContactMessage);
 router.get('/faqs', getFAQs);
 router.patch('/faqs/:id/helpful', voteFAQHelpful);
 router.get('/faqs/categories', getFAQCategories);
-router.get('/faqs/admin', verifyFBToken, verifyAdmin, getAllFAQsAdmin);
-router.post('/faqs', verifyFBToken, verifyAdmin, createFAQ);
-router.patch('/faqs/:id', verifyFBToken, verifyAdmin, updateFAQ);
-router.delete('/faqs/:id', verifyFBToken, verifyAdmin, deleteFAQ);
+router.get('/faqs/admin', verifyAuthToken, verifyAdmin, getAllFAQsAdmin);
+router.post('/faqs', verifyAuthToken, verifyAdmin, createFAQ);
+router.patch('/faqs/:id', verifyAuthToken, verifyAdmin, updateFAQ);
+router.delete('/faqs/:id', verifyAuthToken, verifyAdmin, deleteFAQ);
 
 // Review Routes
 router.get('/reviews/rider/:email', getRiderReviews);
-router.post('/reviews', verifyFBToken, validate(reviewSchema), submitReview);
+router.post('/reviews', verifyAuthToken, validate(reviewSchema), submitReview);
 
 // Feedback Routes
-router.post('/feedback', verifyFBToken, validate(feedbackSchema), submitFeedback);
-router.get('/feedback', verifyFBToken, verifyAdmin, getAllFeedback);
+router.post('/feedback', verifyAuthToken, validate(feedbackSchema), submitFeedback);
+router.get('/feedback', verifyAuthToken, verifyAdmin, getAllFeedback);
 
 // Notification Routes
-router.get('/notifications/:email', verifyFBToken, getUnreadNotifications);
-router.patch('/notifications/:id/read', verifyFBToken, markNotificationRead);
-router.patch('/notifications/read-all/:email', verifyFBToken, markAllNotificationsRead);
+router.get('/notifications/:email', verifyAuthToken, getUnreadNotifications);
+router.patch('/notifications/:id/read', verifyAuthToken, markNotificationRead);
+router.patch('/notifications/read-all/:email', verifyAuthToken, markAllNotificationsRead);
 
 // Messaging Routes
-router.get('/messages/conversations', verifyFBToken, getUserConversations);
-router.get('/messages/:conversationId', verifyFBToken, getChatHistory);
-router.post('/messages/upload-image', verifyFBToken, chatUpload.single('image'), uploadChatImage);
+router.get('/messages/conversations', verifyAuthToken, getUserConversations);
+router.get('/messages/:conversationId', verifyAuthToken, getChatHistory);
+router.post('/messages/upload-image', verifyAuthToken, chatUpload.single('image'), uploadChatImage);
 
 export default router;

@@ -18,33 +18,33 @@ import {
   addAddress,
   deleteAddress,
 } from './user.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { registerUserSchema, updateProfileSchema } from './user.schema';
 
 const router = Router();
 
 // User Profile & Authority Control
-router.get('/users/search', verifyFBToken, verifyAdmin, searchUsers);
-router.get('/users/staff', verifyFBToken, verifyAdmin, getStaffList);
-router.get('/users/summary', verifyFBToken, verifyAdmin, getUsersSummary);
-router.patch('/users/:email/role', verifyFBToken, verifyAdmin, updateUserRole);
-router.patch('/users/:email', verifyFBToken, validate(updateProfileSchema), updateUserProfile);
-router.post('/users', verifyFBToken, validate(registerUserSchema), registerUser);
-router.post('/users/sync', verifyFBToken, syncUser);
-router.get('/user/stats/:email', verifyFBToken, getUserStats);
-router.get('/users/:email', verifyFBToken, getUserByEmail);
+router.get('/users/search', verifyAuthToken, verifyAdmin, searchUsers);
+router.get('/users/staff', verifyAuthToken, verifyAdmin, getStaffList);
+router.get('/users/summary', verifyAuthToken, verifyAdmin, getUsersSummary);
+router.patch('/users/:email/role', verifyAuthToken, verifyAdmin, updateUserRole);
+router.patch('/users/:email', verifyAuthToken, validate(updateProfileSchema), updateUserProfile);
+router.post('/users', verifyAuthToken, validate(registerUserSchema), registerUser);
+router.post('/users/sync', verifyAuthToken, syncUser);
+router.get('/user/stats/:email', verifyAuthToken, getUserStats);
+router.get('/users/:email', verifyAuthToken, getUserByEmail);
 
 // Avatar Library Operations
 router.get('/avatars/random', getRandomAvatar);
 router.get('/avatars', getAllAvatars);
-router.post('/avatars', verifyFBToken, verifyAdmin, addAvatar);
-router.post('/avatars/magic-generate', verifyFBToken, verifyAdmin, magicGenerateAvatars);
-router.delete('/avatars/:id', verifyFBToken, verifyAdmin, deleteAvatar);
+router.post('/avatars', verifyAuthToken, verifyAdmin, addAvatar);
+router.post('/avatars/magic-generate', verifyAuthToken, verifyAdmin, magicGenerateAvatars);
+router.delete('/avatars/:id', verifyAuthToken, verifyAdmin, deleteAvatar);
 
 // Address Book Operations
-router.get('/addresses', verifyFBToken, getMyAddresses);
-router.post('/addresses', verifyFBToken, addAddress);
-router.delete('/addresses/:id', verifyFBToken, deleteAddress);
+router.get('/addresses', verifyAuthToken, getMyAddresses);
+router.post('/addresses', verifyAuthToken, addAddress);
+router.delete('/addresses/:id', verifyAuthToken, deleteAddress);
 
 export default router;

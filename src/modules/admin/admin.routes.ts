@@ -15,7 +15,7 @@ import {
   updatePayoutStatus,
   getAllUsers,
 } from './admin.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import {
   adminSettingsSchema,
@@ -27,7 +27,7 @@ import {
 const router = Router();
 
 // Apply Admin security to ALL routes in this file
-router.use(verifyFBToken, verifyAdmin);
+router.use(verifyAuthToken, verifyAdmin);
 
 router.get('/audit-logs', getAuditLogs);
 router.get('/stats', getStats);

@@ -5,15 +5,20 @@ import {
   recordPayment,
   getCashoutHistory,
 } from './finance.controller';
-import { verifyFBToken } from '../../middleware/auth';
+import { verifyAuthToken } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { paymentSchema } from './finance.schema';
 
 const router = Router();
 
-router.get('/payments', verifyFBToken, getPaymentHistory);
-router.post('/create-payment-intent', verifyFBToken, validate(paymentSchema), createPaymentIntent);
-router.post('/payments', verifyFBToken, validate(paymentSchema), recordPayment);
-router.get('/cashouts', verifyFBToken, getCashoutHistory);
+router.get('/payments', verifyAuthToken, getPaymentHistory);
+router.post(
+  '/create-payment-intent',
+  verifyAuthToken,
+  validate(paymentSchema),
+  createPaymentIntent,
+);
+router.post('/payments', verifyAuthToken, validate(paymentSchema), recordPayment);
+router.get('/cashouts', verifyAuthToken, getCashoutHistory);
 
 export default router;

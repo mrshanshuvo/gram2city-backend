@@ -15,7 +15,7 @@ import {
   addManualTrackingUpdate,
   uploadImage,
 } from './parcel.controller';
-import { verifyFBToken, verifyAdmin } from '../../middleware/auth';
+import { verifyAuthToken, verifyAdmin } from '../../middleware/auth';
 import { validate } from '../../middleware/validate';
 import { parcelSchema, updateParcelSchema, trackingSchema } from './parcel.schema';
 
@@ -38,33 +38,33 @@ const upload = multer({
 });
 
 // Parcel Routes
-router.get('/parcels', verifyFBToken, getMyParcels);
-router.get('/parcels/stats', verifyFBToken, getMyParcelStats);
-router.post('/parcels', verifyFBToken, validate(parcelSchema), bookParcel);
-router.get('/parcels/:id', verifyFBToken, getParcelById);
-router.patch('/parcels/:id', verifyFBToken, validate(updateParcelSchema), updateParcel);
-router.delete('/parcels/:id', verifyFBToken, deleteParcel);
+router.get('/parcels', verifyAuthToken, getMyParcels);
+router.get('/parcels/stats', verifyAuthToken, getMyParcelStats);
+router.post('/parcels', verifyAuthToken, validate(parcelSchema), bookParcel);
+router.get('/parcels/:id', verifyAuthToken, getParcelById);
+router.patch('/parcels/:id', verifyAuthToken, validate(updateParcelSchema), updateParcel);
+router.delete('/parcels/:id', verifyAuthToken, deleteParcel);
 
 // Rider Operations
-router.patch('/parcels/:id/pick', verifyFBToken, markPicked);
-router.patch('/parcels/:id/deliver', verifyFBToken, markDelivered);
+router.patch('/parcels/:id/pick', verifyAuthToken, markPicked);
+router.patch('/parcels/:id/deliver', verifyAuthToken, markDelivered);
 
 // Merchant Bulk Upload
-router.post('/parcels/bulk', verifyFBToken, bulkIngestParcels);
+router.post('/parcels/bulk', verifyAuthToken, bulkIngestParcels);
 
 // Tracking Routes
 router.get('/trackings/:trackingId', getTrackingHistory);
-router.get('/trackings/all/recent', verifyFBToken, verifyAdmin, getRecentTrackings);
+router.get('/trackings/all/recent', verifyAuthToken, verifyAdmin, getRecentTrackings);
 router.post(
   '/trackings',
-  verifyFBToken,
+  verifyAuthToken,
   verifyAdmin,
   validate(trackingSchema),
   addManualTrackingUpdate,
 );
 
 // Image Uploads Route
-router.post('/upload', verifyFBToken, upload.single('image'), uploadImage);
+router.post('/upload', verifyAuthToken, upload.single('image'), uploadImage);
 
 // Multer Error Handler
 router.use((err: any, _req: any, res: any, next: any) => {
