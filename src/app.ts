@@ -5,15 +5,10 @@ import helmet from 'helmet';
 import compression from 'compression';
 import cookieParser from 'cookie-parser';
 import rateLimit from 'express-rate-limit';
-import admin from 'firebase-admin';
 import logger from './middleware/logger';
 import { globalErrorHandler } from './middleware/globalErrorHandler';
 
 import { config } from './config';
-
-// ─── Firebase Admin ───────────────────────────────────────────────────────────
-const serviceAccount = JSON.parse(Buffer.from(config.FB_SERVICE_KEY, 'base64').toString('utf8'));
-admin.initializeApp({ credential: admin.credential.cert(serviceAccount) });
 
 // ─── Express App ──────────────────────────────────────────────────────────────
 const app = express();

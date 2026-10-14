@@ -1,21 +1,5 @@
-import admin from 'firebase-admin';
 import { usersCollection, ridersCollection, merchantsCollection, initDB } from '../db/db';
-import { config } from '../config';
-
-// Initialize Firebase Admin if not initialized
-if (!admin.apps.length) {
-  if (config.FB_SERVICE_KEY) {
-    const serviceAccount = JSON.parse(
-      Buffer.from(config.FB_SERVICE_KEY, 'base64').toString('utf8'),
-    );
-    admin.initializeApp({
-      credential: admin.credential.cert(serviceAccount),
-    });
-  } else {
-    console.error('❌ FB_SERVICE_KEY is missing in env!');
-    process.exit(1);
-  }
-}
+import type { User } from '../types/types';
 
 const demoAccounts = [
   {
@@ -52,27 +36,6 @@ async function seed() {
   await initDB();
 
   for (const account of demoAccounts) {
-    let firebaseUser;
-    try {
-      firebaseUser = await admin.auth().getUserByEmail(account.email);
-      await admin.auth().updateUser(firebaseUser.uid, {
-        password: account.password,
-        displayName: account.displayName,
-      });
-      console.log(`✅ Firebase user updated: ${account.email}`);
-    } catch {
-      try {
-        firebaseUser = await admin.auth().createUser({
-          email: account.email,
-          password: account.password,
-          displayName: account.displayName,
-        });
-        console.log(`✨ Firebase user created: ${account.email}`);
-      } catch (e) {
-        console.warn(`Firebase user skip/notice for ${account.email}`);
-      }
-    }
-
     const bcrypt = await import('bcryptjs');
     const hashedPassword = await bcrypt.hash(account.password, 10);
 
@@ -84,7 +47,7 @@ async function seed() {
           email: account.email,
           password: hashedPassword,
           name: account.displayName,
-          role: account.role as any,
+          role: account.role as User['role'],
           photoURL: `https://api.dicebear.com/7.x/lorelei/svg?seed=${account.role}`,
           isProfileComplete: true,
           updatedAt: new Date(),

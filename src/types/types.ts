@@ -1,5 +1,4 @@
 import { ObjectId } from 'mongodb';
-import type * as admin from 'firebase-admin';
 
 // ─── MongoDB Document Interfaces ────────────────────────────────────────────
 
@@ -12,8 +11,8 @@ export interface User {
   role?: 'user' | 'admin' | 'rider' | 'merchant' | 'superAdmin';
   phone?: string;
   address?: string;
-  status?: 'active' | 'suspended' | 'pending'; // Added: User status management
-  emailVerified?: boolean; // Added: Synced from Firebase
+  status?: 'active' | 'suspended' | 'pending';
+  emailVerified?: boolean;
   isProfileComplete?: boolean;
   created_at?: string;
   last_login?: string;
@@ -328,10 +327,19 @@ export interface Address {
 
 // ─── Express Request Augmentation ───────────────────────────────────────────
 
+export interface AuthUser {
+  email: string;
+  role?: string;
+  uid?: string;
+  name?: string;
+  picture?: string;
+  email_verified?: boolean;
+}
+
 declare global {
   namespace Express {
     interface Request {
-      user: admin.auth.DecodedIdToken;
+      user: AuthUser;
     }
   }
 }

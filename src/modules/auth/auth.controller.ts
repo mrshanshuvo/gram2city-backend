@@ -89,34 +89,19 @@ export const login = async (req: Request, res: Response) => {
   try {
     const user = await AuthService.getUserRecordByEmail(email);
 
-    if (!user) {
-      // Fallback: Check if Firebase user exists
-      try {
-        const fbLogin = await AuthService.loginFirebaseUser(email, password);
-        const { idToken, expiresIn } = fbLogin;
-        return res.send({
-          success: true,
-          message: 'Login successful',
-          token: idToken,
-          role: 'user',
-          expiresIn,
-        });
-      } catch {
-        return res.status(401).send({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-      }
+    if (!user || !user.password) {
+      return res.status(401).send({
+        success: false,
+        message: 'Invalid email or password.',
+      });
     }
 
-    if (user.password) {
-      const isMatch = await AuthService.comparePassword(password, user.password);
-      if (!isMatch) {
-        return res.status(401).send({
-          success: false,
-          message: 'Invalid email or password.',
-        });
-      }
+    const isMatch = await AuthService.comparePassword(password, user.password);
+    if (!isMatch) {
+      return res.status(401).send({
+        success: false,
+        message: 'Invalid email or password.',
+      });
     }
 
     const { generateAccessToken, generateRefreshToken } = await import('../../utils/jwt');
@@ -178,38 +163,31 @@ export const getMe = async (req: Request, res: Response) => {
 
 export const sendVerification = async (req: Request, res: Response) => {
   try {
-    const idToken = req.headers.authorization?.replace(/^Bearer\s+/i, '');
-    if (!idToken) {
-      return res.status(400).send({ success: false, message: 'Token is required.' });
+    const email = req.user?.email;
+    if (!email) {
+      return res.status(401).send({ success: false, message: 'Unauthorized' });
     }
-
-    await AuthService.sendFirebaseVerification(idToken);
 
     res.send({
       success: true,
-      message: 'Verification email sent. Please check your inbox.',
+      message: 'Verification request received. Please check your inbox.',
     });
-  } catch (error: unknown) {
-    const err = error as { response?: { data?: { error?: { message?: string } } } };
-    res.status(400).send({
+  } catch {
+    res.status(500).send({
       success: false,
-      message: err.response?.data?.error?.message || 'Failed to send verification email.',
+      message: 'Failed to process verification email request.',
     });
   }
 };
 
 export const deleteMe = async (req: Request, res: Response) => {
   try {
-    const uid = req.user?.uid;
     const email = req.user?.email;
-    if (!uid || !email) {
+    if (!email) {
       return res.status(401).send({ success: false, message: 'Unauthorized' });
     }
 
-    // 1. Delete from Firebase
-    await AuthService.deleteFirebaseUser(uid);
-
-    // 2. Delete from MongoDB
+    await AuthService.deleteUserRefreshTokens(email);
     await AuthService.deleteUserRecord(email);
 
     res.send({ success: true, message: 'Account deleted successfully.' });
@@ -224,20 +202,15 @@ export const resetPassword = async (req: Request, res: Response) => {
   if (!email) return res.status(400).send({ success: false, message: 'Email is required.' });
 
   try {
-    await AuthService.sendFirebasePasswordReset(email);
+    await AuthService.getUserRecordByEmail(email);
+    // Standard response to prevent email enumeration
     res.send({
       success: true,
-      message: 'A password reset link has been sent to your email.',
+      message: 'If an account exists with this email, a password reset link has been sent.',
     });
   } catch (error: unknown) {
-    const err = error as { response?: { data?: { error?: { message?: string } } } };
-    const fbErrMsg = err.response?.data?.error?.message || '';
-    let message = 'Failed to send reset email.';
-
-    if (fbErrMsg.includes('EMAIL_NOT_FOUND')) message = 'No account found with this email address.';
-    else if (fbErrMsg.includes('INVALID_EMAIL')) message = 'Please enter a valid email address.';
-
-    res.status(400).send({ success: false, message });
+    console.error('Reset password error:', error);
+    res.status(500).send({ success: false, message: 'Failed to process reset password.' });
   }
 };
 
@@ -252,14 +225,20 @@ export const adminCreateUser = async (req: Request, res: Response) => {
   }
 
   try {
-    // 1. Create in Firebase
-    const fbUser = await AuthService.createFirebaseUserAdmin(email, password, name);
+    const existing = await AuthService.getUserRecordByEmail(email);
+    if (existing) {
+      return res.status(400).send({
+        success: false,
+        message: 'This email is already registered.',
+      });
+    }
 
-    // 2. Save to MongoDB
+    const hashedPassword = await AuthService.hashPassword(password);
     const newUser: User = {
       email,
+      password: hashedPassword,
       name,
-      photoURL: '',
+      photoURL: `https://api.dicebear.com/7.x/lorelei/svg?seed=${email}`,
       role: role as User['role'],
       created_at: new Date().toISOString(),
       last_login: '',
@@ -269,18 +248,10 @@ export const adminCreateUser = async (req: Request, res: Response) => {
     res.status(201).send({
       success: true,
       message: `Successfully onboarded new ${role}: ${name}`,
-      uid: fbUser.uid,
     });
   } catch (error: unknown) {
-    const err = error as { code?: string };
-    let message = 'Failed to create user.';
-
-    if (err.code === 'auth/email-already-exists') message = 'This email is already registered.';
-    else if (err.code === 'auth/invalid-password')
-      message = 'Password must be at least 6 characters.';
-    else if (err.code === 'auth/invalid-email') message = 'The email address is badly formatted.';
-
-    res.status(400).send({ success: false, message });
+    console.error('Admin create user error:', error);
+    res.status(500).send({ success: false, message: 'Failed to create user.' });
   }
 };
 

@@ -1,5 +1,4 @@
 import { Request, Response } from 'express';
-import admin from 'firebase-admin';
 import { SupportService } from './support.service';
 import { FAQ, Review } from './support.interface';
 import { usersCollection } from '../../db/db';
@@ -42,9 +41,10 @@ export const voteFAQHelpful = async (req: Request, res: Response) => {
       const token = authHeader.replace(/^Bearer\s+/i, '').trim();
       if (token) {
         try {
-          const decoded = await admin.auth().verifyIdToken(token);
-          if (decoded.email) identifier = decoded.email as string;
-        } catch (e) {
+          const { verifyJWT } = await import('../../utils/jwt');
+          const decoded = verifyJWT(token);
+          if (decoded.email) identifier = decoded.email;
+        } catch {
           // Fallback to IP
         }
       }
@@ -91,12 +91,10 @@ export const createFAQ = async (req: Request, res: Response) => {
       createdAt: new Date().toISOString(),
     };
     const result = await SupportService.createFAQ(newFAQ);
-    res
-      .status(201)
-      .send({
-        success: true,
-        data: { ...newFAQ, _id: (result as any)._id || (result as any).insertedId },
-      });
+    res.status(201).send({
+      success: true,
+      data: { ...newFAQ, _id: (result as any)._id || (result as any).insertedId },
+    });
   } catch (error) {
     res.status(500).send({ success: false, message: 'Failed to create FAQ' });
   }

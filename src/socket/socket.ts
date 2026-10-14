@@ -37,7 +37,7 @@ export const initSocket = (server: HttpServer) => {
     socket.on('join_chat', async (conversationId: string, token?: string) => {
       if (token) {
         try {
-          const decoded = await verifyFBTokenInSocket(token);
+          const decoded = await verifySocketToken(token);
           if (decoded.email) {
             socket.join(decoded.email);
             console.log(`👤 Socket ${socket.id} joined user room: ${decoded.email}`);
@@ -75,7 +75,7 @@ export const initSocket = (server: HttpServer) => {
 
         let decoded;
         try {
-          decoded = await verifyFBTokenInSocket(token);
+          decoded = await verifySocketToken(token);
         } catch {
           socket.emit('message_error', {
             message: 'Unauthorized: invalid token',
@@ -129,7 +129,7 @@ export const initSocket = (server: HttpServer) => {
       const token = data?.token as string | undefined;
       if (!token) return;
       try {
-        const decoded = await verifyFBTokenInSocket(token);
+        const decoded = await verifySocketToken(token);
         io.to(data.conversationId).emit('user_typing', {
           senderEmail: decoded.email,
           conversationId: data.conversationId,
@@ -150,7 +150,7 @@ export const initSocket = (server: HttpServer) => {
 
       let decoded;
       try {
-        decoded = await verifyFBTokenInSocket(token);
+        decoded = await verifySocketToken(token);
       } catch {
         socket.emit('message_error', {
           message: 'Unauthorized: invalid read token',
@@ -190,7 +190,7 @@ export const initSocket = (server: HttpServer) => {
   return io;
 };
 
-async function verifyFBTokenInSocket(token: string) {
-  const { getAuth } = await import('firebase-admin/auth');
-  return getAuth().verifyIdToken(token);
+async function verifySocketToken(token: string) {
+  const { verifyJWT } = await import('../utils/jwt');
+  return verifyJWT(token);
 }

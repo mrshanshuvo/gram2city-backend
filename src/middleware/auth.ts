@@ -1,10 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import admin from 'firebase-admin';
 import { usersCollection, merchantsCollection, ridersCollection } from '../db/db';
+import { verifyJWT } from '../utils/jwt';
 
 // ─── Token Verification ───────────────────────────────────────────────────────
 
-export const verifyFBToken = async (
+export const verifyAuthToken = async (
   req: Request,
   res: Response,
   next: NextFunction,
@@ -16,30 +16,22 @@ export const verifyFBToken = async (
   }
 
   // Robust token extraction: Remove "Bearer" (case-insensitive) and any leading/trailing spaces
-  const token = authHeader
-    .replace(/^Bearer\s+/i, '')
-    .replace(/^Bearer\s+/i, '')
-    .trim();
+  const token = authHeader.replace(/^Bearer\s+/i, '').trim();
 
   if (!token) {
     res.status(401).send({ success: false, message: 'Unauthorized: Invalid token format' });
     return;
   }
   try {
-    const { verifyJWT } = await import('../utils/jwt');
     const decodedJwt = verifyJWT(token);
-    req.user = decodedJwt as any;
+    req.user = decodedJwt;
     return next();
-  } catch (jwtErr) {
-    try {
-      const decoded = await admin.auth().verifyIdToken(token);
-      req.user = decoded;
-      return next();
-    } catch (error) {
-      res.status(401).send({ success: false, message: 'Unauthorized' });
-    }
+  } catch {
+    res.status(401).send({ success: false, message: 'Unauthorized: Invalid or expired token' });
   }
 };
+
+export const verifyFBToken = verifyAuthToken;
 
 // ─── Admin Guard ──────────────────────────────────────────────────────────────
 
