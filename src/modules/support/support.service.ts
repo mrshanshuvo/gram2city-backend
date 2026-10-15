@@ -13,10 +13,10 @@ export class SupportService {
   // FAQs
   static async getFAQs(page: number, limit: number, category?: string, sortBy: string = 'order') {
     const skip = (page - 1) * limit;
-    const query: any = { isActive: true };
+    const query: Record<string, unknown> = { isActive: true };
     if (category) query.category = category;
 
-    const sortObj: any = {};
+    const sortObj: Record<string, 1 | -1> = {};
     if (sortBy === 'helpful') {
       sortObj.helpfulCount = -1;
     } else {
@@ -111,7 +111,7 @@ export class SupportService {
       ...data,
       type: 'contact_inquiry',
       timestamp: new Date().toISOString(),
-    } as any);
+    } as unknown as Feedback);
   }
 
   static async getAllFeedback(): Promise<Feedback[]> {
@@ -140,7 +140,7 @@ export class SupportService {
       .lean() as unknown as ChatMessage[];
   }
 
-  static async getUserConversations(email: string): Promise<any[]> {
+  static async getUserConversations(email: string): Promise<Record<string, unknown>[]> {
     return MessageModel.aggregate([
       {
         $match: {

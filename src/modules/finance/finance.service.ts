@@ -10,9 +10,7 @@ import {
 } from '../../db/models';
 import { Payment } from './finance.interface';
 
-const stripe = new Stripe(config.STRIPE_SECRET_KEY, {
-  apiVersion: '2023-10-16' as any,
-});
+const stripe = new Stripe(config.STRIPE_SECRET_KEY);
 
 export class FinanceService {
   static async getPaymentHistory(email: string): Promise<Payment[]> {
@@ -125,24 +123,31 @@ export class FinanceService {
     };
   }
 
-  static async getCashoutHistory(riderEmail: string): Promise<any[]> {
+  static async getCashoutHistory(riderEmail: string): Promise<Record<string, unknown>[]> {
     const cashouts = await CashoutModel.find({ rider_email: riderEmail })
       .populate('parcel_id', 'trackingId parcelName rider_earning')
       .sort({ requested_at: -1 })
       .lean();
 
-    return cashouts.map((c: any) => ({
-      _id: c._id?.toString(),
-      rider_email: c.rider_email,
-      rider_name: c.rider_name,
-      amount: c.amount ?? c.earning ?? 0,
-      earning: c.earning ?? c.amount ?? 0,
-      status: c.status,
-      requested_at: c.requested_at,
-      cashed_out_at: c.cashed_out_at || c.requested_at,
-      parcel_id: c.parcel_id?._id ? c.parcel_id._id.toString() : c.parcel_id?.toString() || '',
-      trackingId: c.trackingId || c.parcel_id?.trackingId || '',
-      parcel_name: c.parcel_name || c.parcel_id?.parcelName || '',
-    }));
+    return cashouts.map((raw) => {
+      const c = raw as unknown as Record<string, unknown>;
+      const parcelObj =
+        typeof c.parcel_id === 'object' && c.parcel_id !== null
+          ? (c.parcel_id as Record<string, unknown>)
+          : null;
+      return {
+        _id: c._id ? String(c._id) : '',
+        rider_email: c.rider_email,
+        rider_name: c.rider_name,
+        amount: c.amount ?? c.earning ?? 0,
+        earning: c.earning ?? c.amount ?? 0,
+        status: c.status,
+        requested_at: c.requested_at,
+        cashed_out_at: c.cashed_out_at || c.requested_at,
+        parcel_id: parcelObj?._id ? String(parcelObj._id) : c.parcel_id ? String(c.parcel_id) : '',
+        trackingId: c.trackingId || (parcelObj?.trackingId as string) || '',
+        parcel_name: c.parcel_name || (parcelObj?.parcelName as string) || '',
+      };
+    });
   }
 }

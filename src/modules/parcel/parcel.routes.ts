@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction } from 'express';
 import multer from 'multer';
 import {
   getMyParcels,
@@ -76,13 +76,13 @@ router.post(
 router.post('/upload', verifyAuthToken, upload.single('image'), uploadImage);
 
 // Multer Error Handler
-router.use((err: any, _req: any, res: any, next: any) => {
+router.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).send({ success: false, message: 'File too large. Max limit is 5MB.' });
     }
     return res.status(400).send({ success: false, message: err.message });
-  } else if (err) {
+  } else if (err instanceof Error) {
     return res.status(400).send({ success: false, message: err.message });
   }
   next();

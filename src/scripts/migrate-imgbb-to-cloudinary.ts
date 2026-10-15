@@ -58,7 +58,7 @@ function uploadBufferToCloudinary(buffer: Buffer, folder: string): Promise<strin
           fetch_format: 'auto',
           quality: 'auto',
         },
-        (err: any, result: any) => {
+        (err: unknown, result: { secure_url: string } | undefined) => {
           if (err || !result) return reject(err ?? new Error('No Cloudinary result'));
           resolve(result.secure_url);
         },
@@ -122,9 +122,10 @@ async function migrate() {
         console.log(`      OLD: ${oldUrl}`);
         console.log(`      NEW: ${newUrl}`);
         totalUpdated++;
-      } catch (err: any) {
+      } catch (err: unknown) {
         console.log('❌ FAILED');
-        console.error(`      ${err?.message ?? err}`);
+        const message = err instanceof Error ? err.message : String(err);
+        console.error(`      ${message}`);
         totalFailed++;
       }
     }

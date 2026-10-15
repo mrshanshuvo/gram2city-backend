@@ -1,4 +1,4 @@
-import { Router } from 'express';
+import { Router, Request, Response, NextFunction, RequestHandler } from 'express';
 import multer from 'multer';
 import {
   getPublicSettings,
@@ -49,31 +49,31 @@ const upload = multer({
   },
 });
 
-const parseNestedBody = (req: any, _res: any, next: any) => {
+const parseNestedBody = (req: Request, _res: Response, next: NextFunction) => {
   if (req.body) {
-    const result: any = {};
+    const result: Record<string, unknown> = {};
     for (const key in req.body) {
       const value = req.body[key];
       if (key.includes('[')) {
-        const parts = key.split(/[\[\]]+/).filter(Boolean);
+        const parts = key.split(/[[\]]+/).filter(Boolean);
         const isArray = key.endsWith('[]');
-        let current = result;
+        let current: Record<string, unknown> = result;
         for (let i = 0; i < parts.length; i++) {
           const part = parts[i];
           if (i === parts.length - 1) {
             if (isArray) {
-              current[part] = current[part] || [];
+              current[part] = (current[part] as unknown[]) || [];
               if (Array.isArray(value)) {
-                current[part].push(...value);
+                (current[part] as unknown[]).push(...value);
               } else {
-                current[part].push(value);
+                (current[part] as unknown[]).push(value);
               }
             } else {
               current[part] = value;
             }
           } else {
             current[part] = current[part] || {};
-            current = current[part];
+            current = current[part] as Record<string, unknown>;
           }
         }
       } else {
@@ -119,8 +119,12 @@ router.get('/merchants/me', verifyAuthToken, getMerchantProfile);
 router.get('/merchants/stats', verifyAuthToken, getMerchantStats);
 
 // ─── LANDING ELEMENTS CRUD ADMIN ROUTES ──────────────────────────────────────
-const registerCRUD = (name: string, schema?: any, imageField?: string) => {
-  const middleware: any[] = [];
+const registerCRUD = (
+  name: string,
+  schema?: Parameters<typeof validate>[0],
+  imageField?: string,
+) => {
+  const middleware: RequestHandler[] = [];
   if (imageField) middleware.push(upload.single(imageField));
   if (schema) middleware.push(validate(schema));
 
@@ -143,13 +147,13 @@ registerCRUD('process-steps', processStepSchema);
 registerCRUD('testimonials', testimonialSchema, 'image');
 
 // ─── Multer Error Handler ──────────────────────────────────────────────────
-router.use((err: any, _req: any, res: any, next: any) => {
+router.use((err: unknown, _req: Request, res: Response, next: NextFunction) => {
   if (err instanceof multer.MulterError) {
     if (err.code === 'LIMIT_FILE_SIZE') {
       return res.status(400).send({ success: false, message: 'File too large. Max limit is 5MB.' });
     }
     return res.status(400).send({ success: false, message: err.message });
-  } else if (err) {
+  } else if (err instanceof Error) {
     return res.status(400).send({ success: false, message: err.message });
   }
   next();

@@ -9,7 +9,7 @@ export class ParcelService {
     payment_status?: string,
     delivery_status?: string,
   ): Promise<Parcel[]> {
-    const query: any = { created_by: email };
+    const query: Record<string, unknown> = { created_by: email };
     if (payment_status) query.payment_status = payment_status;
     if (delivery_status) query.delivery_status = delivery_status;
 

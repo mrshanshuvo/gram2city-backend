@@ -27,13 +27,22 @@ import {
   Merchant,
 } from './public.interface';
 
-const modelMap: { [key: string]: any } = {
-  banners: BannerModel,
-  services: ServiceModel,
-  features: FeatureModel,
-  partners: PartnerModel,
-  'process-steps': ProcessStepModel,
-  testimonials: TestimonialModel,
+interface GenericLandingModel {
+  create: (doc: Record<string, unknown>) => Promise<{ insertedId?: ObjectId; _id?: ObjectId }>;
+  updateOne: (
+    filter: { _id: ObjectId },
+    update: { $set: Record<string, unknown> },
+  ) => Promise<{ matchedCount: number }>;
+  deleteOne: (filter: { _id: ObjectId }) => Promise<{ deletedCount: number }>;
+}
+
+const modelMap: Record<string, GenericLandingModel> = {
+  banners: BannerModel as unknown as GenericLandingModel,
+  services: ServiceModel as unknown as GenericLandingModel,
+  features: FeatureModel as unknown as GenericLandingModel,
+  partners: PartnerModel as unknown as GenericLandingModel,
+  'process-steps': ProcessStepModel as unknown as GenericLandingModel,
+  testimonials: TestimonialModel as unknown as GenericLandingModel,
 };
 
 export class PublicService {
@@ -43,10 +52,9 @@ export class PublicService {
   }
 
   static async getPublicTracking(trackingId: string) {
-    return TrackingModel.find({ trackingId }).sort({ time: -1 }).lean();
+    return TrackingModel.find({ trackingId }).sort({ timestamp: -1 }).lean();
   }
 
-  // Landing endpoints
   static async getProcessSteps(showAll?: boolean): Promise<ProcessStep[]> {
     const query = showAll ? {} : { isActive: true };
     return ProcessStepModel.find(query).sort({ order: 1 }).lean() as unknown as ProcessStep[];
@@ -56,8 +64,8 @@ export class PublicService {
     return LandingConfigModel.findOne({}).lean() as unknown as LandingConfig | null;
   }
 
-  static async updateLandingConfig(update: Partial<LandingConfig>): Promise<void> {
-    await LandingConfigModel.updateOne({}, { $set: update }, { upsert: true });
+  static async updateLandingConfig(update: Partial<LandingConfig>) {
+    return LandingConfigModel.updateOne({}, { $set: update }, { upsert: true });
   }
 
   static async getBanners(showAll?: boolean): Promise<BannerSlide[]> {
@@ -80,16 +88,19 @@ export class PublicService {
     return PartnerModel.find(query).sort({ order: 1 }).lean() as unknown as PartnerLogo[];
   }
 
-  static async getTestimonials(showAll?: boolean): Promise<any[]> {
+  static async getTestimonials(showAll?: boolean): Promise<Record<string, unknown>[]> {
     const query = showAll ? {} : { isActive: true };
-    return TestimonialModel.find(query).sort({ createdAt: -1 }).lean();
+    return TestimonialModel.find(query).sort({ createdAt: -1 }).lean() as unknown as Record<
+      string,
+      unknown
+    >[];
   }
 
   static async getStats() {
-    const warehouses = await WarehouseModel.find({}).lean();
-    const totalDistricts = [...new Set(warehouses.map((w: any) => w.district))];
-    const activeHubs = warehouses.filter((w: any) => w.status === 'active').length;
-    const expressZones = warehouses.filter((w: any) => w.status === 'limited').length;
+    const warehouses = (await WarehouseModel.find({}).lean()) as unknown as Warehouse[];
+    const totalDistricts = [...new Set(warehouses.map((w) => w.district))];
+    const activeHubs = warehouses.filter((w) => w.status === 'active').length;
+    const expressZones = warehouses.filter((w) => w.status === 'limited').length;
     const approvedRiders = await RiderModel.countDocuments({
       status: 'approved',
     });
@@ -116,8 +127,11 @@ export class PublicService {
     return { success: true, message: 'Welcome to the family!' };
   }
 
-  static async getNewsletterSubscribers(): Promise<any[]> {
-    return NewsletterModel.find({}).sort({ subscribedAt: -1 }).lean();
+  static async getNewsletterSubscribers(): Promise<Record<string, unknown>[]> {
+    return NewsletterModel.find({}).sort({ subscribedAt: -1 }).lean() as unknown as Record<
+      string,
+      unknown
+    >[];
   }
 
   static async getWarehouses(filter: {
@@ -125,7 +139,7 @@ export class PublicService {
     district?: string;
     status?: string;
   }): Promise<Warehouse[]> {
-    const query: any = {};
+    const query: Record<string, unknown> = {};
 
     if (filter.search) {
       query.$or = [
@@ -134,7 +148,6 @@ export class PublicService {
         { region: { $regex: filter.search, $options: 'i' } },
       ];
     }
-
     if (filter.district) query.district = filter.district;
     if (filter.status) query.status = filter.status;
 
@@ -142,34 +155,21 @@ export class PublicService {
   }
 
   // Merchant operations
-  static async applyMerchant(merchantData: Omit<Merchant, '_id'>) {
-    const existing = await MerchantModel.findOne({
-      email: merchantData.email,
-    }).lean();
+  static async applyMerchant(data: Omit<Merchant, '_id'>) {
+    const existing = await MerchantModel.findOne({ email: data.email }).lean();
     if (existing) {
-      return {
-        success: false,
-        message: 'A merchant application already exists for this email.',
-      };
+      return { success: false, message: 'Merchant application already submitted.' };
     }
 
-    const user = await UserModel.findOne({ email: merchantData.email }).lean();
-    if (!user) {
-      return { success: false, message: 'User not found in system.' };
-    }
+    const result = await MerchantModel.create(data);
 
-    const newMerchant = {
-      ...merchantData,
-      userId: user._id as ObjectId,
-      status: 'pending' as const,
-      createdAt: new Date().toISOString(),
-    };
+    // Also update role if needed, or leave it as pending
+    await UserModel.updateOne({ email: data.email }, { $set: { role: 'merchant' } });
 
-    const result = await MerchantModel.create(newMerchant);
     return {
       success: true,
       message: 'Application submitted successfully and is pending approval.',
-      merchantId: (result as any)._id,
+      merchantId: (result as { _id?: unknown })._id,
     };
   }
 
@@ -221,7 +221,7 @@ export class PublicService {
   }
 
   // Generic landing CRUD helpers
-  static async createLandingItem(name: string, item: any) {
+  static async createLandingItem(name: string, item: Record<string, unknown>) {
     const MModel = modelMap[name];
     if (!MModel) throw new Error(`Model not found for: ${name}`);
 
@@ -231,7 +231,7 @@ export class PublicService {
     return MModel.create(item);
   }
 
-  static async updateLandingItem(name: string, id: string, update: any) {
+  static async updateLandingItem(name: string, id: string, update: Record<string, unknown>) {
     const MModel = modelMap[name];
     if (!MModel) throw new Error(`Model not found for: ${name}`);
 

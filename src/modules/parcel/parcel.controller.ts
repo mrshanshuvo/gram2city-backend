@@ -4,347 +4,297 @@ import { ParcelService } from './parcel.service';
 import { Parcel } from './parcel.interface';
 import { io } from '../../socket/socket';
 import { uploadToCloudinary } from '../../utils/upload';
+import { catchAsync } from '../../utils/catchAsync';
 
-export const getMyParcels = async (req: Request, res: Response) => {
-  try {
-    const email = req.user?.email as string;
-    const { payment_status, delivery_status } = req.query;
+export const getMyParcels = catchAsync(async (req: Request, res: Response) => {
+  const email = req.user?.email as string;
+  const { payment_status, delivery_status } = req.query;
 
-    const parcels = await ParcelService.getMyParcels(
-      email,
-      payment_status as string,
-      delivery_status as string,
-    );
+  const parcels = await ParcelService.getMyParcels(
+    email,
+    payment_status as string,
+    delivery_status as string,
+  );
 
-    res.send({ success: true, count: parcels.length, data: parcels });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to fetch your parcels.' });
+  res.send({ success: true, count: parcels.length, data: parcels });
+});
+
+export const getMyParcelStats = catchAsync(async (req: Request, res: Response) => {
+  const email = req.user?.email as string;
+  const stats = await ParcelService.getMyParcelStats(email);
+  res.send({ success: true, stats });
+});
+
+export const bookParcel = catchAsync(async (req: Request, res: Response) => {
+  const {
+    parcelName,
+    parcelType,
+    weight,
+    receiverName,
+    receiverPhone,
+    deliveryAddress,
+    receiverDistrict,
+    senderPhone,
+    deliveryDate,
+    requiredVehicle = 'bike',
+    merchantId,
+    codAmount,
+  } = req.body;
+
+  if (
+    !parcelName ||
+    !weight ||
+    !receiverName ||
+    !receiverPhone ||
+    !deliveryAddress ||
+    !receiverDistrict
+  ) {
+    return res.status(400).send({ success: false, message: 'Missing required fields.' });
   }
-};
 
-export const getMyParcelStats = async (req: Request, res: Response) => {
-  try {
-    const email = req.user?.email as string;
-    const stats = await ParcelService.getMyParcelStats(email);
-    res.send({ success: true, stats });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to calculate stats.' });
+  const weightNum = Number(weight);
+  const { totalCost, riderEarning, adminProfit } = await ParcelService.calculateCost(
+    weightNum,
+    requiredVehicle as string,
+  );
+
+  const trackingId = `G2C-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
+  const newParcel: Parcel = {
+    trackingId,
+    parcelName,
+    parcelType,
+    created_by: req.user?.email as string,
+    creation_date: new Date().toISOString(),
+    createdAt: new Date().toISOString(),
+    weight: weightNum,
+    parcelWeight: weightNum,
+    receiverName,
+    receiverPhone,
+    receiverPhoneNumber: receiverPhone,
+    deliveryAddress,
+    receiverDistrict,
+    receiverRegion: receiverDistrict,
+    senderPhone,
+    senderContact: senderPhone,
+    senderDistrict: req.body.senderDistrict || '',
+    senderRegion: req.body.senderDistrict || '',
+    senderName: req.body.senderName || req.user?.name || 'Anonymous',
+    deliveryDate,
+    cost: totalCost,
+    rider_earning: riderEarning,
+    admin_profit: adminProfit,
+    payment_status: 'unpaid',
+    delivery_status: 'pending',
+    requiredVehicle: requiredVehicle as Parcel['requiredVehicle'],
+    merchantId: merchantId ? new ObjectId(String(merchantId)) : undefined,
+    codAmount: codAmount ? Number(codAmount) : undefined,
+  };
+
+  const result = await ParcelService.bookParcel(newParcel);
+
+  if (io) {
+    io.emit('new_parcel', {
+      trackingId,
+      sender: newParcel.senderName,
+      destination: newParcel.receiverDistrict,
+      cost: totalCost,
+    });
   }
-};
 
-export const bookParcel = async (req: Request, res: Response) => {
-  try {
-    const {
-      parcelName,
-      parcelType,
-      weight,
-      receiverName,
-      receiverPhone,
-      deliveryAddress,
-      receiverDistrict,
-      senderPhone,
-      deliveryDate,
-      requiredVehicle = 'bike',
-      merchantId,
-      codAmount,
-    } = req.body;
+  res.status(201).send({
+    success: true,
+    message: 'Parcel booked successfully!',
+    trackingId,
+    cost: totalCost,
+    id: result.insertedId,
+  });
+});
 
-    if (
-      !parcelName ||
-      !weight ||
-      !receiverName ||
-      !receiverPhone ||
-      !deliveryAddress ||
-      !receiverDistrict
-    ) {
-      return res.status(400).send({ success: false, message: 'Missing required fields.' });
-    }
+export const getParcelById = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const email = req.user?.email as string;
 
-    const weightNum = Number(weight);
+  const parcel = await ParcelService.getParcelById(id as string);
+
+  if (!parcel) {
+    return res.status(404).send({ success: false, message: 'Parcel not found.' });
+  }
+
+  if (parcel.created_by !== email && req.user?.role !== 'admin') {
+    return res.status(403).send({ success: false, message: 'Unauthorized access.' });
+  }
+
+  res.send({ success: true, data: parcel });
+});
+
+export const updateParcel = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const email = req.user?.email as string;
+  const updateData = req.body;
+
+  const parcel = await ParcelService.getParcelById(id as string);
+
+  if (!parcel) {
+    return res.status(404).send({ success: false, message: 'Parcel not found.' });
+  }
+
+  if (parcel.created_by !== email) {
+    return res.status(403).send({ success: false, message: 'Unauthorized.' });
+  }
+
+  if (parcel.delivery_status !== 'pending') {
+    return res.status(400).send({
+      success: false,
+      message: 'Cannot update a parcel that is already in transit.',
+    });
+  }
+
+  if (updateData.weight) {
+    const weightNum = Number(updateData.weight);
     const { totalCost, riderEarning, adminProfit } = await ParcelService.calculateCost(
       weightNum,
-      requiredVehicle as string,
+      parcel.requiredVehicle,
     );
 
-    const trackingId = `G2C-${Math.random().toString(36).substring(2, 8).toUpperCase()}`;
-    const newParcel: Parcel = {
-      trackingId,
-      parcelName,
-      parcelType,
-      created_by: req.user?.email as string,
-      creation_date: new Date().toISOString(),
-      createdAt: new Date().toISOString(),
-      weight: weightNum,
-      parcelWeight: weightNum,
-      receiverName,
-      receiverPhone,
-      receiverPhoneNumber: receiverPhone,
-      deliveryAddress,
-      receiverDistrict,
-      receiverRegion: receiverDistrict,
-      senderPhone,
-      senderContact: senderPhone,
-      senderDistrict: req.body.senderDistrict || '',
-      senderRegion: req.body.senderDistrict || '',
-      senderName: req.body.senderName || req.user?.name || 'Anonymous',
-      deliveryDate,
-      cost: totalCost,
-      rider_earning: riderEarning,
-      admin_profit: adminProfit,
-      payment_status: 'unpaid',
-      delivery_status: 'pending',
-      requiredVehicle: requiredVehicle as any,
-      merchantId: merchantId ? new ObjectId(String(merchantId)) : undefined,
-      codAmount: codAmount ? Number(codAmount) : undefined,
-    };
+    updateData.cost = totalCost;
+    updateData.rider_earning = riderEarning;
+    updateData.admin_profit = adminProfit;
+    updateData.parcelWeight = weightNum;
+  }
 
-    const result = await ParcelService.bookParcel(newParcel);
+  if (updateData.receiverPhone) updateData.receiverPhoneNumber = updateData.receiverPhone;
+  if (updateData.receiverDistrict) updateData.receiverRegion = updateData.receiverDistrict;
 
-    if (io) {
-      io.emit('new_parcel', {
-        trackingId,
-        sender: newParcel.senderName,
-        destination: newParcel.receiverDistrict,
-        cost: totalCost,
-      });
-    }
+  await ParcelService.updateParcel(id as string, updateData);
 
-    res.status(201).send({
-      success: true,
-      message: 'Parcel booked successfully!',
-      trackingId,
-      cost: totalCost,
-      id: result.insertedId,
+  res.send({ success: true, message: 'Parcel updated successfully.' });
+});
+
+export const deleteParcel = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const email = req.user?.email as string;
+
+  const parcel = await ParcelService.getParcelById(id as string);
+
+  if (!parcel) return res.status(404).send({ success: false, message: 'Parcel not found.' });
+
+  if (parcel.created_by !== email) {
+    return res.status(403).send({
+      success: false,
+      message: 'Unauthorized to cancel this parcel.',
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to book parcel.' });
   }
-};
 
-export const getParcelById = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const email = req.user?.email as string;
-
-    const parcel = await ParcelService.getParcelById(id as string);
-
-    if (!parcel) {
-      return res.status(404).send({ success: false, message: 'Parcel not found.' });
-    }
-
-    if (parcel.created_by !== email && (req.user as any).role !== 'admin') {
-      return res.status(403).send({ success: false, message: 'Unauthorized access.' });
-    }
-
-    res.send({ success: true, data: parcel });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to fetch parcel.' });
-  }
-};
-
-export const updateParcel = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const email = req.user?.email as string;
-    const updateData = req.body;
-
-    const parcel = await ParcelService.getParcelById(id as string);
-
-    if (!parcel) {
-      return res.status(404).send({ success: false, message: 'Parcel not found.' });
-    }
-
-    if (parcel.created_by !== email) {
-      return res.status(403).send({ success: false, message: 'Unauthorized.' });
-    }
-
-    if (parcel.delivery_status !== 'pending') {
-      return res.status(400).send({
-        success: false,
-        message: 'Cannot update a parcel that is already in transit.',
-      });
-    }
-
-    if (updateData.weight) {
-      const weightNum = Number(updateData.weight);
-      const { totalCost, riderEarning, adminProfit } = await ParcelService.calculateCost(
-        weightNum,
-        parcel.requiredVehicle,
-      );
-
-      updateData.cost = totalCost;
-      updateData.rider_earning = riderEarning;
-      updateData.admin_profit = adminProfit;
-      updateData.parcelWeight = weightNum;
-    }
-
-    if (updateData.receiverPhone) updateData.receiverPhoneNumber = updateData.receiverPhone;
-    if (updateData.receiverDistrict) updateData.receiverRegion = updateData.receiverDistrict;
-
-    await ParcelService.updateParcel(id as string, updateData);
-
-    res.send({ success: true, message: 'Parcel updated successfully.' });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to update parcel.' });
-  }
-};
-
-export const deleteParcel = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const email = req.user?.email as string;
-
-    const parcel = await ParcelService.getParcelById(id as string);
-
-    if (!parcel) return res.status(404).send({ success: false, message: 'Parcel not found.' });
-
-    if (parcel.created_by !== email) {
-      return res.status(403).send({
-        success: false,
-        message: 'Unauthorized to cancel this parcel.',
-      });
-    }
-
-    if (parcel.delivery_status !== 'pending') {
-      return res.status(400).send({
-        success: false,
-        message: 'Cannot cancel a parcel that is already assigned or in transit.',
-      });
-    }
-
-    await ParcelService.deleteParcel(id as string);
-    res.send({ success: true, message: 'Parcel cancelled successfully.' });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to cancel parcel.' });
-  }
-};
-
-export const markPicked = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const result = await ParcelService.markPicked(id as string);
-
-    if (result.modifiedCount === 0) {
-      return res.status(404).send({ success: false, message: 'Parcel not found' });
-    }
-
-    res.send({ success: true, message: 'Parcel picked up successfully.' });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to mark as picked' });
-  }
-};
-
-export const bulkIngestParcels = async (req: Request, res: Response) => {
-  try {
-    const { parcels, merchantId } = req.body;
-    if (!Array.isArray(parcels))
-      return res.status(400).send({ success: false, message: 'Invalid data format' });
-
-    const newParcels = parcels.map(
-      (p: any) =>
-        ({
-          trackingId: `G2C-B-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
-          parcelName: p.parcelName || 'Bulk Item',
-          parcelType: p.parcelType || 'Package',
-          created_by: req.user?.email as string,
-          creation_date: new Date().toISOString(),
-          createdAt: new Date().toISOString(),
-          weight: Number(p.weight) || 1,
-          parcelWeight: Number(p.weight) || 1,
-          receiverName: p.receiverName,
-          receiverPhone: p.receiverPhone,
-          receiverPhoneNumber: p.receiverPhone,
-          deliveryAddress: p.deliveryAddress,
-          receiverDistrict: p.receiverDistrict,
-          receiverRegion: p.receiverDistrict,
-          senderName: req.user?.name || 'Merchant',
-          senderPhone: p.senderPhone || '',
-          cost: Number(p.cost) || 50,
-          payment_status: 'unpaid' as const,
-          delivery_status: 'pending' as const,
-          merchantId: merchantId ? new ObjectId(String(merchantId)) : undefined,
-          codAmount: Number(p.codAmount) || 0,
-        }) as Parcel,
-    );
-
-    await ParcelService.bulkIngestParcels(newParcels, req.user?.email as string);
-
-    res.status(201).send({
-      success: true,
-      message: `${newParcels.length} parcels uploaded successfully.`,
+  if (parcel.delivery_status !== 'pending') {
+    return res.status(400).send({
+      success: false,
+      message: 'Cannot cancel a parcel that is already assigned or in transit.',
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to process bulk upload' });
   }
-};
 
-export const markDelivered = async (req: Request, res: Response) => {
-  try {
-    const { id } = req.params;
-    const result = await ParcelService.markDelivered(id as string);
+  await ParcelService.deleteParcel(id as string);
+  res.send({ success: true, message: 'Parcel cancelled successfully.' });
+});
 
-    if (result.modifiedCount === 0) {
-      return res.status(404).send({ success: false, message: 'Parcel not found' });
-    }
+export const markPicked = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ParcelService.markPicked(id as string);
 
-    res.send({ success: true, message: 'Parcel delivered successfully.' });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to mark as delivered' });
+  if (result.modifiedCount === 0) {
+    return res.status(404).send({ success: false, message: 'Parcel not found' });
   }
-};
 
-export const getTrackingHistory = async (req: Request, res: Response) => {
-  try {
-    const { trackingId } = req.params;
-    const updates = await ParcelService.getTrackingHistory(trackingId as string);
+  res.send({ success: true, message: 'Parcel picked up successfully.' });
+});
 
-    if (updates.length === 0) {
-      return res.status(404).send({
-        success: false,
-        message: 'No tracking history found for this ID.',
-      });
-    }
+export const bulkIngestParcels = catchAsync(async (req: Request, res: Response) => {
+  const { parcels, merchantId } = req.body;
+  if (!Array.isArray(parcels))
+    return res.status(400).send({ success: false, message: 'Invalid data format' });
 
-    res.send({ success: true, trackingId, history: updates });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to fetch tracking info.' });
+  const newParcels = (parcels as Array<Record<string, unknown>>).map(
+    (p) =>
+      ({
+        trackingId: `G2C-B-${Math.random().toString(36).substring(2, 8).toUpperCase()}`,
+        parcelName: (p.parcelName as string) || 'Bulk Item',
+        parcelType: (p.parcelType as string) || 'Package',
+        created_by: req.user?.email as string,
+        creation_date: new Date().toISOString(),
+        createdAt: new Date().toISOString(),
+        weight: Number(p.weight) || 1,
+        parcelWeight: Number(p.weight) || 1,
+        receiverName: p.receiverName as string,
+        receiverPhone: p.receiverPhone as string,
+        receiverPhoneNumber: p.receiverPhone as string,
+        deliveryAddress: p.deliveryAddress as string,
+        receiverDistrict: p.receiverDistrict as string,
+        receiverRegion: p.receiverDistrict as string,
+        senderName: req.user?.name || 'Merchant',
+        senderPhone: (p.senderPhone as string) || '',
+        cost: Number(p.cost) || 50,
+        payment_status: 'unpaid' as const,
+        delivery_status: 'pending' as const,
+        merchantId: merchantId ? new ObjectId(String(merchantId)) : undefined,
+        codAmount: Number(p.codAmount) || 0,
+      }) as Parcel,
+  );
+
+  await ParcelService.bulkIngestParcels(newParcels, req.user?.email as string);
+
+  res.status(201).send({
+    success: true,
+    message: `${newParcels.length} parcels uploaded successfully.`,
+  });
+});
+
+export const markDelivered = catchAsync(async (req: Request, res: Response) => {
+  const { id } = req.params;
+  const result = await ParcelService.markDelivered(id as string);
+
+  if (result.modifiedCount === 0) {
+    return res.status(404).send({ success: false, message: 'Parcel not found' });
   }
-};
 
-export const getRecentTrackings = async (req: Request, res: Response) => {
-  try {
-    const recentUpdates = await ParcelService.getRecentTrackings();
-    res.send({ success: true, history: recentUpdates });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to fetch recent trackings' });
-  }
-};
+  res.send({ success: true, message: 'Parcel delivered successfully.' });
+});
 
-export const addManualTrackingUpdate = async (req: Request, res: Response) => {
-  try {
-    const { trackingId, status, details, location } = req.body;
+export const getTrackingHistory = catchAsync(async (req: Request, res: Response) => {
+  const { trackingId } = req.params;
+  const updates = await ParcelService.getTrackingHistory(trackingId as string);
 
-    if (!trackingId || !status || !details) {
-      return res.status(400).send({ success: false, message: 'Missing required fields' });
-    }
-
-    const result = await ParcelService.addManualTrackingUpdate(
-      trackingId,
-      status,
-      details,
-      location,
-    );
-    res.status(201).send({
-      success: true,
-      message: 'Tracking update added.',
-      id: (result as any)._id || (result as any).insertedId,
+  if (updates.length === 0) {
+    return res.status(404).send({
+      success: false,
+      message: 'No tracking history found for this ID.',
     });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Server error' });
   }
-};
 
-export const uploadImage = async (req: Request, res: Response) => {
+  res.send({ success: true, trackingId, history: updates });
+});
+
+export const getRecentTrackings = catchAsync(async (_req: Request, res: Response) => {
+  const recentUpdates = await ParcelService.getRecentTrackings();
+  res.send({ success: true, history: recentUpdates });
+});
+
+export const addManualTrackingUpdate = catchAsync(async (req: Request, res: Response) => {
+  const { trackingId, status, details, location } = req.body;
+
+  if (!trackingId || !status || !details) {
+    return res.status(400).send({ success: false, message: 'Missing required fields' });
+  }
+
+  const result = await ParcelService.addManualTrackingUpdate(trackingId, status, details, location);
+  res.status(201).send({
+    success: true,
+    message: 'Tracking update added.',
+    id:
+      (result as { _id?: unknown; insertedId?: unknown })._id ||
+      (result as { insertedId?: unknown }).insertedId,
+  });
+});
+
+export const uploadImage = catchAsync(async (req: Request, res: Response) => {
   if (!req.file) {
     return res.status(400).send({
       success: false,
@@ -352,10 +302,6 @@ export const uploadImage = async (req: Request, res: Response) => {
     });
   }
 
-  try {
-    const url = await uploadToCloudinary(req.file, 'gram2city/parcels');
-    res.send({ success: true, url });
-  } catch (error) {
-    res.status(500).send({ success: false, message: 'Failed to upload image' });
-  }
-};
+  const url = await uploadToCloudinary(req.file, 'gram2city/parcels');
+  res.send({ success: true, url });
+});

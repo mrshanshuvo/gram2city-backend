@@ -75,7 +75,7 @@ export interface LandingConfig {
 
 export interface Merchant {
   _id?: ObjectId;
-  userId: ObjectId;
+  userId?: ObjectId;
   email: string;
   businessName: string;
   businessType?: string;

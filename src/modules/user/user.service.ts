@@ -37,10 +37,13 @@ export class UserService {
       },
     ]);
 
-    const roleMap = stats[0].roleCounts.reduce((acc: any, curr: any) => {
-      acc[curr._id] = curr.count;
-      return acc;
-    }, {});
+    const roleMap = stats[0].roleCounts.reduce(
+      (acc: Record<string, number>, curr: { _id: string; count: number }) => {
+        acc[curr._id] = curr.count;
+        return acc;
+      },
+      {} as Record<string, number>,
+    );
 
     return {
       superAdmin: roleMap.superAdmin || 0,
@@ -58,7 +61,7 @@ export class UserService {
   }
 
   static async updateUserRole(email: string, role: string) {
-    return UserModel.updateOne({ email }, { $set: { role: role as any } });
+    return UserModel.updateOne({ email }, { $set: { role: role as User['role'] } });
   }
 
   static async updateUserProfile(email: string, updateData: Partial<User>) {
@@ -73,7 +76,7 @@ export class UserService {
     return UserModel.create(newUser);
   }
 
-  static async syncUser(email: string, updateDoc: any): Promise<void> {
+  static async syncUser(email: string, updateDoc: Record<string, unknown>): Promise<void> {
     await UserModel.updateOne({ email }, updateDoc, {
       upsert: true,
     });
@@ -140,7 +143,10 @@ export class UserService {
       .lean() as unknown as Address[];
   }
 
-  static async addAddress(address: Omit<Address, '_id'>, email: string) {
+  static async addAddress(
+    address: Omit<Address, '_id' | 'userEmail' | 'createdAt'>,
+    email: string,
+  ) {
     if (address.isDefault) {
       await AddressModel.updateMany({ userEmail: email }, { $set: { isDefault: false } });
     }
