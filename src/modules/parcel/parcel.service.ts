@@ -70,10 +70,10 @@ export class ParcelService {
     const multiplier = vehicleMultipliers[requiredVehicle as keyof typeof vehicleMultipliers] || 1;
 
     const baseCost = baseFee + (weight > 1 ? (weight - 1) * costPerKg : 0);
-    const totalCost = baseCost * multiplier;
+    const totalCost = Math.round(baseCost * multiplier);
 
-    const riderEarning = (totalCost * riderCommissionPct) / 100;
-    const adminProfit = totalCost - riderEarning;
+    const riderEarning = Math.round(((totalCost * riderCommissionPct) / 100) * 100) / 100;
+    const adminProfit = Math.round((totalCost - riderEarning) * 100) / 100;
 
     return { totalCost, riderEarning, adminProfit };
   }

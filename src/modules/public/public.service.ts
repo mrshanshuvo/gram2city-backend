@@ -48,7 +48,17 @@ const modelMap: Record<string, GenericLandingModel> = {
 export class PublicService {
   // Public general endpoints
   static async getPublicSettings() {
-    return SettingsModel.findOne({}).lean();
+    const settings = await SettingsModel.findOne({}).lean();
+    if (!settings) {
+      return {
+        base_delivery_fee: 50,
+        cost_per_kg: 20,
+        rider_commission_percentage: 15,
+        updated_at: new Date().toISOString(),
+        updated_by: 'system',
+      };
+    }
+    return settings;
   }
 
   static async getPublicTracking(trackingId: string) {

@@ -14,6 +14,7 @@ import {
   getRecentTrackings,
   addManualTrackingUpdate,
   uploadImage,
+  calculateParcelCost,
 } from './parcel.controller';
 import { assignRider } from '../admin/admin.controller';
 import { assignRiderSchema } from '../admin/admin.schema';
@@ -40,6 +41,8 @@ const upload = multer({
 });
 
 // Parcel Routes
+router.post('/parcels/calculate-cost', calculateParcelCost);
+router.post('/pricing/calculate', calculateParcelCost);
 router.get('/parcels', verifyAuthToken, getMyParcels);
 router.get('/parcels/stats', verifyAuthToken, getMyParcelStats);
 router.post('/parcels', verifyAuthToken, validate(parcelSchema), bookParcel);

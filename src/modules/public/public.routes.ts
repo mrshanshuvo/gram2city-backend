@@ -87,6 +87,7 @@ const parseNestedBody = (req: Request, _res: Response, next: NextFunction) => {
 
 // ─── PUBLIC GENERAL ROUTES ──────────────────────────────────────────────────
 router.get('/public/settings', getPublicSettings);
+router.get('/settings', getPublicSettings);
 router.get('/public/tracking/:trackingId', getPublicTracking);
 
 // ─── LANDING PAGE PUBLIC ROUTES ──────────────────────────────────────────────

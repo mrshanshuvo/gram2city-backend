@@ -306,3 +306,22 @@ export const uploadImage = catchAsync(async (req: Request, res: Response) => {
   const url = await uploadToCloudinary(req.file, 'gram2city/parcels');
   res.send({ success: true, url });
 });
+
+export const calculateParcelCost = catchAsync(async (req: Request, res: Response) => {
+  const weight = Number(req.body.weight || 0);
+  const requiredVehicle = (req.body.requiredVehicle || req.body.vehicleType || 'bike') as string;
+  const { totalCost, riderEarning, adminProfit } = await ParcelService.calculateCost(
+    weight,
+    requiredVehicle,
+  );
+  res.send({
+    success: true,
+    cost: totalCost,
+    data: {
+      totalCost,
+      cost: totalCost,
+      riderEarning,
+      adminProfit,
+    },
+  });
+});
