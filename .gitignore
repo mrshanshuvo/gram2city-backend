@@ -6,3 +6,5 @@ walkthrough.md
 logs.txt
 *.log
 .env*
+.credentials
+*client_secret*.json
