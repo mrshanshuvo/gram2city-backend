@@ -7,11 +7,17 @@ import { config } from '../config';
 export let io: Server;
 
 export const initSocket = (server: HttpServer) => {
+  const allowedOrigins = config.CLIENT_URL.includes(',')
+    ? config.CLIENT_URL.split(',').map((url) => url.trim())
+    : config.CLIENT_URL;
+
   io = new Server(server, {
     cors: {
-      origin: config.CLIENT_URL,
+      origin: allowedOrigins,
       methods: ['GET', 'POST'],
+      credentials: true,
     },
+    transports: ['websocket', 'polling'],
   });
 
   io.on('connection', (socket) => {

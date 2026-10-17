@@ -62,6 +62,18 @@ app.get('/', (_req, res) => {
     status: 'healthy',
   });
 });
+
+app.get('/health', (_req, res) => {
+  res.status(200).json({
+    success: true,
+    status: 'healthy',
+    uptimeSeconds: Math.floor(process.uptime()),
+    timestamp: new Date().toISOString(),
+    version: '2.3.0',
+    environment: config.NODE_ENV,
+    memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
+  });
+});
 app.use('/', apiRouter);
 
 // ─── Centralized Error Handler ───────────────────────────────────────────────

@@ -1,0 +1,29 @@
+# Dependencies & build outputs
+node_modules
+dist
+coverage
+
+# Environment & credentials
+.env
+.env.*
+!.env.example
+.credentials
+client_secret*.json
+
+# Tests & development configs
+tests
+.vscode
+.husky
+.vercel
+.git
+.github
+
+# Logs & temporary files
+*.log
+logs.txt
+debug.log
+npm-debug.log*
+yarn-debug.log*
+yarn-error.log*
+.DS_Store
+Thumbs.db

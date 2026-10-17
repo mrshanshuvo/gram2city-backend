@@ -230,3 +230,18 @@ export const initDB = async () => {
     console.error('❌ Database indexing / Mongoose initialization failed:', error);
   }
 };
+
+/**
+ * Gracefully disconnect Mongoose ODM and native MongoDB client.
+ */
+export const closeDB = async (): Promise<void> => {
+  try {
+    if (mongoose.connection.readyState !== 0) {
+      await mongoose.disconnect();
+    }
+    await client.close();
+    console.log('✅ Database connections closed cleanly');
+  } catch (error) {
+    console.error('❌ Error closing database connections:', error);
+  }
+};

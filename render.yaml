@@ -1,0 +1,56 @@
+# ==============================================================================
+# Gram2City Backend — Render Infrastructure as Code Blueprint
+# https://render.com/docs/blueprint-spec
+# ==============================================================================
+
+services:
+  - type: web
+    name: gram2city-backend
+    runtime: docker
+    dockerfilePath: ./Dockerfile
+    dockerContext: .
+    region: singapore # Closest low-latency region to Bangladesh (<40ms)
+    plan: starter     # Persistent WebSocket support (can also be 'free')
+    healthCheckPath: /health
+    autoDeploy: true
+    envVars:
+      - key: NODE_ENV
+        value: production
+
+      - key: PORT
+        value: 5000
+
+      - key: CLIENT_URL
+        sync: false
+        # Example: https://gram2city.vercel.app,https://gram2city-web-client.vercel.app
+
+      - key: MONGODB_URI
+        sync: false
+        # Example: mongodb+srv://username:password@cluster.mongodb.net/?retryWrites=true&w=majority
+
+      - key: DB_NAME
+        value: parcelDB
+
+      - key: JWT_SECRET
+        generateValue: true
+
+      - key: JWT_REFRESH_SECRET
+        generateValue: true
+
+      - key: STRIPE_SECRET_KEY
+        sync: false
+
+      - key: STRIPE_CURRENCY
+        value: bdt
+
+      - key: CLOUDINARY_CLOUD_NAME
+        sync: false
+
+      - key: CLOUDINARY_API_KEY
+        sync: false
+
+      - key: CLOUDINARY_API_SECRET
+        sync: false
+
+      - key: GOOGLE_CLIENT_ID
+        sync: false
