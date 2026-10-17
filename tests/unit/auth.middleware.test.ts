@@ -1,5 +1,10 @@
 import { Request, Response, NextFunction } from 'express';
-import { verifyAuthToken, verifyAdmin, verifyRider, verifyMerchant } from '../../src/middleware/auth';
+import {
+  verifyAuthToken,
+  verifyAdmin,
+  verifyRider,
+  verifyMerchant,
+} from '../../src/middleware/auth';
 import * as jwtUtils from '../../src/utils/jwt';
 import { UserModel, MerchantModel, RiderModel } from '../../src/db/models';
 
@@ -53,7 +58,10 @@ describe('Auth & RBAC Middlewares', () => {
 
       expect(mockRes.status).toHaveBeenCalledWith(401);
       expect(mockRes.send).toHaveBeenCalledWith(
-        expect.objectContaining({ success: false, message: 'Unauthorized: Invalid or expired token' }),
+        expect.objectContaining({
+          success: false,
+          message: 'Unauthorized: Invalid or expired token',
+        }),
       );
       expect(mockNext).not.toHaveBeenCalled();
     });
@@ -76,6 +84,21 @@ describe('Auth & RBAC Middlewares', () => {
   });
 
   describe('verifyAdmin', () => {
+    it('returns 401 if req.user is absent', async () => {
+      mockReq.user = undefined;
+
+      await verifyAdmin(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Unauthorized: User context required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
     it('returns 403 if user in database is not an admin', async () => {
       mockReq.user = { email: 'user@example.com', role: 'user', name: 'User' };
       jest.spyOn(UserModel, 'findOne').mockReturnValue({
@@ -105,6 +128,21 @@ describe('Auth & RBAC Middlewares', () => {
   });
 
   describe('verifyRider', () => {
+    it('returns 401 if req.user is absent', async () => {
+      mockReq.user = undefined;
+
+      await verifyRider(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Unauthorized: User context required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
     it('calls next() if user role is rider', async () => {
       mockReq.user = { email: 'rider@example.com', role: 'rider', name: 'Rider' };
       jest.spyOn(UserModel, 'findOne').mockReturnValue({
@@ -148,6 +186,21 @@ describe('Auth & RBAC Middlewares', () => {
   });
 
   describe('verifyMerchant', () => {
+    it('returns 401 if req.user is absent', async () => {
+      mockReq.user = undefined;
+
+      await verifyMerchant(mockReq as Request, mockRes as Response, mockNext);
+
+      expect(mockRes.status).toHaveBeenCalledWith(401);
+      expect(mockRes.send).toHaveBeenCalledWith(
+        expect.objectContaining({
+          success: false,
+          message: 'Unauthorized: User context required',
+        }),
+      );
+      expect(mockNext).not.toHaveBeenCalled();
+    });
+
     it('calls next() if user role is merchant', async () => {
       mockReq.user = { email: 'merchant@example.com', role: 'merchant', name: 'Merchant' };
       jest.spyOn(UserModel, 'findOne').mockReturnValue({

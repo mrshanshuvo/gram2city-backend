@@ -38,7 +38,11 @@ export const verifyAdmin = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const email = req.user.email;
+  const email = req.user?.email;
+  if (!email) {
+    res.status(401).send({ success: false, message: 'Unauthorized: User context required' });
+    return;
+  }
   const user = await UserModel.findOne({ email }).lean();
   if (user?.role !== 'admin' && user?.role !== 'superAdmin') {
     res.status(403).send({ success: false, message: 'Forbidden' });
@@ -54,7 +58,11 @@ export const verifyMerchant = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const email = req.user.email;
+  const email = req.user?.email;
+  if (!email) {
+    res.status(401).send({ success: false, message: 'Unauthorized: User context required' });
+    return;
+  }
   const user = await UserModel.findOne({ email }).lean();
 
   if (user?.role === 'merchant') {
@@ -76,7 +84,11 @@ export const verifyRider = async (
   res: Response,
   next: NextFunction,
 ): Promise<void> => {
-  const email = req.user.email;
+  const email = req.user?.email;
+  if (!email) {
+    res.status(401).send({ success: false, message: 'Unauthorized: User context required' });
+    return;
+  }
   const user = await UserModel.findOne({ email }).lean();
 
   if (user?.role === 'rider') {

@@ -10,12 +10,20 @@ const httpServer = createServer(app);
 // Initialize Real-time Engine
 const io = initSocket(httpServer);
 
-// Initialize Database Indexes
-initDB();
+// Bootstrap Database & Real-Time Server
+async function bootstrap(): Promise<void> {
+  try {
+    await initDB();
+    httpServer.listen(PORT, () => {
+      console.log(`🚀 Gram2City Real-time Engine running on http://localhost:${PORT}`);
+    });
+  } catch (error) {
+    console.error('❌ Failed to bootstrap Gram2City server:', error);
+    process.exit(1);
+  }
+}
 
-httpServer.listen(PORT, () => {
-  console.log(`🚀 Gram2City Real-time Engine running on http://localhost:${PORT}`);
-});
+bootstrap();
 
 // ─── Graceful Shutdown Handlers ──────────────────────────────────────────────
 let isShuttingDown = false;

@@ -453,10 +453,12 @@ const refreshTokenSchema = new Schema<RefreshToken>(
     token: { type: String, required: true, unique: true, index: true },
     email: { type: String, required: true, index: true },
     role: { type: String, required: true },
-    expiresAt: { type: Date, required: true, index: { expires: 0 } },
+    expiresAt: { type: Date, required: true },
   },
   { timestamps: true, collection: 'refresh_tokens' },
 );
+
+refreshTokenSchema.index({ expiresAt: 1 }, { expireAfterSeconds: 0 });
 
 // ─── Exported Mongoose Models ────────────────────────────────────────────────
 export const UserModel = model<User>('User', userSchema);

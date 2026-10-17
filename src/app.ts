@@ -8,6 +8,7 @@ import rateLimit from 'express-rate-limit';
 import logger from './middleware/logger';
 import { globalErrorHandler } from './middleware/globalErrorHandler';
 
+import mongoose from 'mongoose';
 import { config } from './config';
 
 // ─── Express App ──────────────────────────────────────────────────────────────
@@ -64,9 +65,14 @@ app.get('/', (_req, res) => {
 });
 
 app.get('/health', (_req, res) => {
-  res.status(200).json({
-    success: true,
-    status: 'healthy',
+  const isDbConnected = mongoose.connection.readyState === 1 || config.NODE_ENV === 'test';
+  const status = isDbConnected ? 'healthy' : 'degraded';
+  const statusCode = isDbConnected ? 200 : 503;
+
+  res.status(statusCode).json({
+    success: isDbConnected,
+    status,
+    database: mongoose.connection.readyState === 1 ? 'connected' : 'disconnected',
     uptimeSeconds: Math.floor(process.uptime()),
     timestamp: new Date().toISOString(),
     version: '2.3.0',
@@ -74,6 +80,7 @@ app.get('/health', (_req, res) => {
     memoryUsageMB: Math.round(process.memoryUsage().rss / 1024 / 1024),
   });
 });
+
 app.use('/', apiRouter);
 
 // ─── Centralized Error Handler ───────────────────────────────────────────────

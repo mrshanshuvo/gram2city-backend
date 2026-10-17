@@ -1,5 +1,5 @@
 import { UserModel, RiderModel, MerchantModel } from '../db/models';
-import { initDB } from '../db/db';
+import { initDB, closeDB } from '../db/db';
 import type { User } from '../types/types';
 
 const demoAccounts = [
@@ -68,16 +68,14 @@ async function seed() {
           $set: {
             email: account.email,
             name: account.displayName,
-            phone: account.phone,
-            vehicle: account.vehicle,
+            phone: account.phone || '01711002233',
+            vehicleType: 'bike',
             status: 'approved',
-            workStatus: 'available',
-            totalEarnings: 4500,
-            cashoutPending: 0,
-            updatedAt: new Date(),
-          },
-          $setOnInsert: {
-            createdAt: new Date(),
+            is_available: true,
+            district: 'Dhaka',
+            region: 'Dhaka',
+            average_rating: 5.0,
+            total_delivered: 24,
           },
         },
         { upsert: true },
@@ -90,14 +88,12 @@ async function seed() {
         {
           $set: {
             email: account.email,
-            storeName: account.displayName,
-            phone: account.phone,
+            businessName: account.displayName,
+            businessType: 'Retail',
+            phone: account.phone || '01822334455',
+            address: 'Farmgate, Tejgaon',
+            district: 'Dhaka',
             status: 'approved',
-            codBalance: 12500,
-            updatedAt: new Date().toISOString(),
-          },
-          $setOnInsert: {
-            createdAt: new Date().toISOString(),
           },
         },
         { upsert: true },
@@ -106,10 +102,12 @@ async function seed() {
   }
 
   console.log('🎉 Demo Seed Completed Successfully!');
+  await closeDB();
   process.exit(0);
 }
 
-seed().catch((err) => {
+seed().catch(async (err) => {
   console.error('❌ Seed error:', err);
+  await closeDB();
   process.exit(1);
 });
