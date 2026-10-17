@@ -8,8 +8,11 @@ export class ParcelService {
     email: string,
     payment_status?: string,
     delivery_status?: string,
+    rider_email?: string,
   ): Promise<Parcel[]> {
-    const query: Record<string, unknown> = { created_by: email };
+    const query: Record<string, unknown> = rider_email
+      ? { assigned_rider_email: rider_email }
+      : { created_by: email };
     if (payment_status) query.payment_status = payment_status;
     if (delivery_status) query.delivery_status = delivery_status;
 

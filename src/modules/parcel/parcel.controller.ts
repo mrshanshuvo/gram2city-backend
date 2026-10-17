@@ -7,16 +7,17 @@ import { uploadToCloudinary } from '../../utils/upload';
 import { catchAsync } from '../../utils/catchAsync';
 
 export const getMyParcels = catchAsync(async (req: Request, res: Response) => {
-  const email = req.user?.email as string;
-  const { payment_status, delivery_status } = req.query;
+  const email = (req.query.email as string) || (req.user?.email as string);
+  const { payment_status, delivery_status, rider_email } = req.query;
 
   const parcels = await ParcelService.getMyParcels(
     email,
     payment_status as string,
     delivery_status as string,
+    rider_email as string,
   );
 
-  res.send({ success: true, count: parcels.length, data: parcels });
+  res.send({ success: true, count: parcels.length, data: parcels, parcels });
 });
 
 export const getMyParcelStats = catchAsync(async (req: Request, res: Response) => {

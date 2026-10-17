@@ -111,10 +111,12 @@ export class RiderService {
 
     const rider = await this.getRiderByEmail(email);
 
+    const avgRating = rider?.average_rating || 0;
     return {
       totalEarnings: deliveryStats[0]?.totalEarnings || 0,
       totalDelivered: rider?.total_delivered || deliveryStats[0]?.totalDelivered || 0,
-      averageRating: rider?.average_rating || 0,
+      averageRating: avgRating,
+      avgRating: avgRating,
     };
   }
 
