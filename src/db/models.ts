@@ -438,6 +438,26 @@ const addressSchema = new Schema<Address>(
   { timestamps: true, collection: 'addresses' },
 );
 
+// ─── 27. Refresh Token Schema (TTL Automatic Expiration) ────────────────────
+export interface RefreshToken {
+  token: string;
+  email: string;
+  role: string;
+  expiresAt: Date;
+  createdAt?: Date;
+  updatedAt?: Date;
+}
+
+const refreshTokenSchema = new Schema<RefreshToken>(
+  {
+    token: { type: String, required: true, unique: true, index: true },
+    email: { type: String, required: true, index: true },
+    role: { type: String, required: true },
+    expiresAt: { type: Date, required: true, index: { expires: 0 } },
+  },
+  { timestamps: true, collection: 'refresh_tokens' },
+);
+
 // ─── Exported Mongoose Models ────────────────────────────────────────────────
 export const UserModel = model<User>('User', userSchema);
 export const ParcelModel = model<Parcel>('Parcel', parcelSchema);
@@ -465,3 +485,4 @@ export const WarehouseModel = model('Warehouse', warehouseSchema);
 export const NewsletterModel = model('Newsletter', newsletterSchema);
 export const TestimonialModel = model('Testimonial', testimonialSchema);
 export const AddressModel = model<Address>('Address', addressSchema);
+export const RefreshTokenModel = model<RefreshToken>('RefreshToken', refreshTokenSchema);

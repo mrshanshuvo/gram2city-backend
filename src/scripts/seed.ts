@@ -1,4 +1,5 @@
-import { usersCollection, ridersCollection, merchantsCollection, initDB } from '../db/db';
+import { UserModel, RiderModel, MerchantModel } from '../db/models';
+import { initDB } from '../db/db';
 import type { User } from '../types/types';
 
 const demoAccounts = [
@@ -39,8 +40,8 @@ async function seed() {
     const bcrypt = await import('bcryptjs');
     const hashedPassword = await bcrypt.hash(account.password, 10);
 
-    // Upsert User in MongoDB usersCollection with hashed password
-    await usersCollection.updateOne(
+    // Upsert User in MongoDB via UserModel with hashed password
+    await UserModel.updateOne(
       { email: account.email },
       {
         $set: {
@@ -61,7 +62,7 @@ async function seed() {
 
     // Role-specific records
     if (account.role === 'rider') {
-      await ridersCollection.updateOne(
+      await RiderModel.updateOne(
         { email: account.email },
         {
           $set: {
@@ -84,7 +85,7 @@ async function seed() {
     }
 
     if (account.role === 'merchant') {
-      await merchantsCollection.updateOne(
+      await MerchantModel.updateOne(
         { email: account.email },
         {
           $set: {

@@ -1,6 +1,5 @@
 import { OAuth2Client } from 'google-auth-library';
-import { UserModel } from '../../db/models';
-import { refreshTokensCollection, RefreshTokenRecord } from '../../db/db';
+import { UserModel, RefreshTokenModel, type RefreshToken } from '../../db/models';
 import type { User } from '../../types/types';
 import { uploadToCloudinary } from '../../utils/upload';
 import { config } from '../../config';
@@ -48,26 +47,24 @@ export class AuthService {
     role: string,
     expiresAt: Date,
   ): Promise<void> {
-    const record: RefreshTokenRecord = {
+    await RefreshTokenModel.create({
       token,
       email,
       role,
       expiresAt,
-      createdAt: new Date(),
-    };
-    await refreshTokensCollection.insertOne(record);
+    });
   }
 
-  static async findRefreshToken(token: string): Promise<RefreshTokenRecord | null> {
-    return refreshTokensCollection.findOne({ token });
+  static async findRefreshToken(token: string): Promise<RefreshToken | null> {
+    return RefreshTokenModel.findOne({ token }).lean();
   }
 
   static async deleteRefreshToken(token: string): Promise<void> {
-    await refreshTokensCollection.deleteOne({ token });
+    await RefreshTokenModel.deleteOne({ token });
   }
 
   static async deleteUserRefreshTokens(email: string): Promise<void> {
-    await refreshTokensCollection.deleteMany({ email });
+    await RefreshTokenModel.deleteMany({ email });
   }
 
   // ─── Direct Google OAuth 2.0 Verification ──────────────────────────────────

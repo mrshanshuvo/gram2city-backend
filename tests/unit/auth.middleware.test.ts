@@ -1,7 +1,7 @@
 import { Request, Response, NextFunction } from 'express';
 import { verifyAuthToken, verifyAdmin, verifyRider, verifyMerchant } from '../../src/middleware/auth';
 import * as jwtUtils from '../../src/utils/jwt';
-import { usersCollection, merchantsCollection, ridersCollection } from '../../src/db/db';
+import { UserModel, MerchantModel, RiderModel } from '../../src/db/models';
 
 describe('Auth & RBAC Middlewares', () => {
   let mockReq: Partial<Request>;
@@ -78,8 +78,8 @@ describe('Auth & RBAC Middlewares', () => {
   describe('verifyAdmin', () => {
     it('returns 403 if user in database is not an admin', async () => {
       mockReq.user = { email: 'user@example.com', role: 'user', name: 'User' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'user',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'user' }),
       } as any);
 
       await verifyAdmin(mockReq as Request, mockRes as Response, mockNext);
@@ -93,8 +93,8 @@ describe('Auth & RBAC Middlewares', () => {
 
     it('calls next() if user in database is an admin', async () => {
       mockReq.user = { email: 'admin@example.com', role: 'admin', name: 'Admin' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'admin',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'admin' }),
       } as any);
 
       await verifyAdmin(mockReq as Request, mockRes as Response, mockNext);
@@ -107,8 +107,8 @@ describe('Auth & RBAC Middlewares', () => {
   describe('verifyRider', () => {
     it('calls next() if user role is rider', async () => {
       mockReq.user = { email: 'rider@example.com', role: 'rider', name: 'Rider' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'rider',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'rider' }),
       } as any);
 
       await verifyRider(mockReq as Request, mockRes as Response, mockNext);
@@ -119,11 +119,11 @@ describe('Auth & RBAC Middlewares', () => {
 
     it('calls next() if user is admin and has an active rider profile', async () => {
       mockReq.user = { email: 'admin@example.com', role: 'admin', name: 'Admin Rider' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'admin',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'admin' }),
       } as any);
-      jest.spyOn(ridersCollection, 'findOne').mockResolvedValue({
-        email: 'admin@example.com',
+      jest.spyOn(RiderModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ email: 'admin@example.com' }),
       } as any);
 
       await verifyRider(mockReq as Request, mockRes as Response, mockNext);
@@ -133,8 +133,8 @@ describe('Auth & RBAC Middlewares', () => {
 
     it('returns 403 if user is neither a rider nor an admin with rider profile', async () => {
       mockReq.user = { email: 'user@example.com', role: 'user', name: 'Regular User' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'user',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'user' }),
       } as any);
 
       await verifyRider(mockReq as Request, mockRes as Response, mockNext);
@@ -150,8 +150,8 @@ describe('Auth & RBAC Middlewares', () => {
   describe('verifyMerchant', () => {
     it('calls next() if user role is merchant', async () => {
       mockReq.user = { email: 'merchant@example.com', role: 'merchant', name: 'Merchant' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'merchant',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'merchant' }),
       } as any);
 
       await verifyMerchant(mockReq as Request, mockRes as Response, mockNext);
@@ -161,11 +161,11 @@ describe('Auth & RBAC Middlewares', () => {
 
     it('calls next() if admin has merchant profile', async () => {
       mockReq.user = { email: 'admin@example.com', role: 'admin', name: 'Admin' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'admin',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'admin' }),
       } as any);
-      jest.spyOn(merchantsCollection, 'findOne').mockResolvedValue({
-        email: 'admin@example.com',
+      jest.spyOn(MerchantModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ email: 'admin@example.com' }),
       } as any);
 
       await verifyMerchant(mockReq as Request, mockRes as Response, mockNext);
@@ -175,8 +175,8 @@ describe('Auth & RBAC Middlewares', () => {
 
     it('returns 403 if user is regular user', async () => {
       mockReq.user = { email: 'user@example.com', role: 'user', name: 'User' };
-      jest.spyOn(usersCollection, 'findOne').mockResolvedValue({
-        role: 'user',
+      jest.spyOn(UserModel, 'findOne').mockReturnValue({
+        lean: jest.fn().mockResolvedValue({ role: 'user' }),
       } as any);
 
       await verifyMerchant(mockReq as Request, mockRes as Response, mockNext);

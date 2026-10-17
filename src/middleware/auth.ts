@@ -1,5 +1,5 @@
 import { Request, Response, NextFunction } from 'express';
-import { usersCollection, merchantsCollection, ridersCollection } from '../db/db';
+import { UserModel, MerchantModel, RiderModel } from '../db/models';
 import { verifyAccessToken } from '../utils/jwt';
 
 // ─── Token Verification ───────────────────────────────────────────────────────
@@ -39,8 +39,8 @@ export const verifyAdmin = async (
   next: NextFunction,
 ): Promise<void> => {
   const email = req.user.email;
-  const user = await usersCollection.findOne({ email });
-  if (user?.role !== 'admin') {
+  const user = await UserModel.findOne({ email }).lean();
+  if (user?.role !== 'admin' && user?.role !== 'superAdmin') {
     res.status(403).send({ success: false, message: 'Forbidden' });
     return;
   }
@@ -55,14 +55,14 @@ export const verifyMerchant = async (
   next: NextFunction,
 ): Promise<void> => {
   const email = req.user.email;
-  const user = await usersCollection.findOne({ email });
+  const user = await UserModel.findOne({ email }).lean();
 
   if (user?.role === 'merchant') {
     return next();
   }
 
-  if (user?.role === 'admin') {
-    const merchantProfile = await merchantsCollection.findOne({ email });
+  if (user?.role === 'admin' || user?.role === 'superAdmin') {
+    const merchantProfile = await MerchantModel.findOne({ email }).lean();
     if (merchantProfile) {
       return next();
     }
@@ -77,14 +77,14 @@ export const verifyRider = async (
   next: NextFunction,
 ): Promise<void> => {
   const email = req.user.email;
-  const user = await usersCollection.findOne({ email });
+  const user = await UserModel.findOne({ email }).lean();
 
   if (user?.role === 'rider') {
     return next();
   }
 
-  if (user?.role === 'admin') {
-    const riderProfile = await ridersCollection.findOne({ email });
+  if (user?.role === 'admin' || user?.role === 'superAdmin') {
+    const riderProfile = await RiderModel.findOne({ email }).lean();
     if (riderProfile) {
       return next();
     }

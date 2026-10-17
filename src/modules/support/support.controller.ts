@@ -1,7 +1,7 @@
 import { Request, Response } from 'express';
 import { SupportService } from './support.service';
 import { FAQ, Review } from './support.interface';
-import { usersCollection } from '../../db/db';
+import { UserModel } from '../../db/models';
 import { uploadToCloudinary } from '../../utils/upload';
 import { catchAsync } from '../../utils/catchAsync';
 
@@ -189,7 +189,7 @@ export const getChatHistory = catchAsync(async (req: Request, res: Response) => 
   const userEmail = req.user?.email as string;
 
   if (!conversationId.includes(userEmail)) {
-    const user = await usersCollection.findOne({ email: userEmail });
+    const user = await UserModel.findOne({ email: userEmail }).lean();
     if (user?.role !== 'admin' && user?.role !== 'superAdmin') {
       return res.status(403).send({
         success: false,
@@ -204,7 +204,7 @@ export const getChatHistory = catchAsync(async (req: Request, res: Response) => 
 
 export const getUserConversations = catchAsync(async (req: Request, res: Response) => {
   const userEmail = req.user?.email as string;
-  const user = await usersCollection.findOne({ email: userEmail });
+  const user = await UserModel.findOne({ email: userEmail }).lean();
   const isAdmin = user?.role === 'admin' || user?.role === 'superAdmin';
   const queryEmail = isAdmin ? 'admin@gram2city.com' : userEmail;
 
