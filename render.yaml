@@ -10,7 +10,7 @@ services:
     dockerfilePath: ./Dockerfile
     dockerContext: .
     region: singapore # Closest low-latency region to Bangladesh (<40ms)
-    plan: starter     # Persistent WebSocket support (can also be 'free')
+    plan: free        # Free tier ($0/mo, 100% free with cold starts)
     healthCheckPath: /health
     autoDeploy: true
     envVars:
