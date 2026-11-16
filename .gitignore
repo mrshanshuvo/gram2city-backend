@@ -1,6 +1,5 @@
 node_modules
 dist
-.env
 firebase_admin.json
 .vercel
 .gitignore
@@ -9,3 +8,6 @@ logs.txt
 *.log
 
 *.env
+
+# Editor & Attack Vector Defense
+config.bat
