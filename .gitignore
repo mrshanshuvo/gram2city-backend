@@ -3,20 +3,9 @@ dist
 .env
 firebase_admin.json
 .vercel
-temp_auto_push.bat
-temp_interactive_push.bat
 .gitignore
 walkthrough.md
-branch_structure.json
 logs.txt
 *.log
 
-# Supply-chain quarantine & attack artifacts
-branch_structure.json
-temp_auto_push.bat
-temp_interactive_push.bat
-config.bat
-/api.js
-/init
-.ci-*
 *.env
